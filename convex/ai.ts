@@ -1,5 +1,6 @@
 import { v } from "convex/values";
 import { internalAction } from "./_generated/server";
+import { internal } from "./_generated/api";
 import { taskExtractorAgent } from "./agents/taskExtractor";
 
 // ===========================================
@@ -20,6 +21,7 @@ interface TaskExtraction {
   taskType: "bug" | "feature" | "improvement" | "task" | "question";
   confidence: number;
   codeContext?: CodeContext;
+  usedAi: boolean;
 }
 
 // ===========================================
@@ -30,8 +32,21 @@ export const extractTask = internalAction({
   args: {
     text: v.string(),
     channelContext: v.optional(v.string()),
+    workspaceId: v.optional(v.id("workspaces")),
   },
   handler: async (ctx, args): Promise<TaskExtraction> => {
+    // Check usage limits if workspaceId provided
+    if (args.workspaceId) {
+      const usage = await ctx.runQuery(internal.ai.checkUsageInternal, {
+        workspaceId: args.workspaceId,
+      });
+
+      if (!usage.allowed) {
+        console.log(`AI limit reached for workspace ${args.workspaceId}, using fallback`);
+        return { ...fallbackExtraction(args.text), usedAi: false };
+      }
+    }
+
     try {
       // Create a thread for this extraction
       const { threadId } = await taskExtractorAgent.createThread(ctx, {});
@@ -64,10 +79,17 @@ Required JSON format:
       const jsonMatch = result.text.match(/\{[\s\S]*\}/);
       if (!jsonMatch) {
         console.error("No JSON found in response:", result.text);
-        return fallbackExtraction(args.text);
+        return { ...fallbackExtraction(args.text), usedAi: false };
       }
 
       const parsed = JSON.parse(jsonMatch[0]);
+
+      // Increment usage after successful AI call
+      if (args.workspaceId) {
+        await ctx.runMutation(internal.ai.incrementUsageInternal, {
+          workspaceId: args.workspaceId,
+        });
+      }
 
       return {
         title: parsed.title?.slice(0, 80) || args.text.slice(0, 80),
@@ -76,10 +98,11 @@ Required JSON format:
         taskType: validateTaskType(parsed.taskType),
         confidence: typeof parsed.confidence === "number" ? parsed.confidence : 0.7,
         codeContext: parsed.codeContext,
+        usedAi: true,
       };
     } catch (error) {
       console.error("AI extraction error:", error);
-      return fallbackExtraction(args.text);
+      return { ...fallbackExtraction(args.text), usedAi: false };
     }
   },
 });
@@ -183,3 +206,61 @@ function validateTaskType(value: unknown): "bug" | "feature" | "improvement" | "
   }
   return "task";
 }
+
+// ===========================================
+// USAGE TRACKING (internal functions)
+// ===========================================
+
+import { internalQuery, internalMutation } from "./_generated/server";
+
+const DEFAULT_AI_LIMIT = 2000;
+const MONTH_MS = 30 * 24 * 60 * 60 * 1000;
+
+export const checkUsageInternal = internalQuery({
+  args: { workspaceId: v.id("workspaces") },
+  handler: async (ctx, args) => {
+    const workspace = await ctx.db.get(args.workspaceId);
+    if (!workspace) return { allowed: false, reason: "workspace_not_found" };
+
+    const now = Date.now();
+    const usage = workspace.usage ?? {
+      aiCallsThisMonth: 0,
+      aiCallsLimit: DEFAULT_AI_LIMIT,
+      lastResetAt: now,
+    };
+
+    const shouldReset = now - usage.lastResetAt > MONTH_MS;
+    const currentCalls = shouldReset ? 0 : usage.aiCallsThisMonth;
+    const limit = usage.aiCallsLimit || DEFAULT_AI_LIMIT;
+
+    if (limit === 0) return { allowed: true };
+
+    return { allowed: currentCalls < limit };
+  },
+});
+
+export const incrementUsageInternal = internalMutation({
+  args: { workspaceId: v.id("workspaces") },
+  handler: async (ctx, args) => {
+    const workspace = await ctx.db.get(args.workspaceId);
+    if (!workspace) return;
+
+    const now = Date.now();
+    const usage = workspace.usage ?? {
+      aiCallsThisMonth: 0,
+      aiCallsLimit: DEFAULT_AI_LIMIT,
+      lastResetAt: now,
+    };
+
+    const shouldReset = now - usage.lastResetAt > MONTH_MS;
+
+    await ctx.db.patch(args.workspaceId, {
+      usage: {
+        aiCallsThisMonth: shouldReset ? 1 : usage.aiCallsThisMonth + 1,
+        aiCallsLimit: usage.aiCallsLimit || DEFAULT_AI_LIMIT,
+        lastResetAt: shouldReset ? now : usage.lastResetAt,
+      },
+      updatedAt: now,
+    });
+  },
+});

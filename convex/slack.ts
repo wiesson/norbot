@@ -421,6 +421,20 @@ export const handleAppMention = internalAction({
 
     // Use the norbot agent to handle everything
     try {
+      // Check AI usage limits
+      const usageCheck = await ctx.runQuery(internal.ai.checkUsageInternal, {
+        workspaceId: workspace._id,
+      });
+
+      if (!usageCheck.allowed) {
+        await sendSlackMessage({
+          channelId: args.channelId,
+          threadTs: args.threadTs,
+          text: "Your workspace has reached its monthly AI usage limit. Please upgrade your plan or wait for the limit to reset.",
+        });
+        return;
+      }
+
       const { threadId } = await norbotAgent.createThread(ctx, {});
 
       // Build attachments info for context
@@ -447,6 +461,11 @@ Original text for task creation: ${cleanText}`;
         messages: [{ role: "user" as const, content: contextInfo }],
         maxSteps: 5,
       } as any);
+
+      // Increment AI usage after successful call
+      await ctx.runMutation(internal.ai.incrementUsageInternal, {
+        workspaceId: workspace._id,
+      });
 
       // Send the agent's response directly
       // The agent handles everything: greetings, summaries, status updates, assignments, task creation

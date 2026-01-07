@@ -182,3 +182,99 @@ export const removeMember = mutation({
     }
   },
 });
+
+// ===========================================
+// USAGE TRACKING
+// ===========================================
+
+const DEFAULT_AI_LIMIT = 2000; // Monthly limit per workspace
+const MONTH_MS = 30 * 24 * 60 * 60 * 1000;
+
+export const checkAiUsage = query({
+  args: { workspaceId: v.id("workspaces") },
+  handler: async (ctx, args) => {
+    const workspace = await ctx.db.get(args.workspaceId);
+    if (!workspace) return { allowed: false, reason: "workspace_not_found" };
+
+    const now = Date.now();
+    const usage = workspace.usage ?? {
+      aiCallsThisMonth: 0,
+      aiCallsLimit: DEFAULT_AI_LIMIT,
+      lastResetAt: now,
+    };
+
+    // Reset if month has passed
+    const shouldReset = now - usage.lastResetAt > MONTH_MS;
+    const currentCalls = shouldReset ? 0 : usage.aiCallsThisMonth;
+    const limit = usage.aiCallsLimit || DEFAULT_AI_LIMIT;
+
+    // 0 = unlimited
+    if (limit === 0) {
+      return { allowed: true, remaining: Infinity, used: currentCalls };
+    }
+
+    const remaining = Math.max(0, limit - currentCalls);
+    return {
+      allowed: remaining > 0,
+      remaining,
+      used: currentCalls,
+      limit,
+      resetsAt: usage.lastResetAt + MONTH_MS,
+    };
+  },
+});
+
+export const incrementAiUsage = mutation({
+  args: { workspaceId: v.id("workspaces") },
+  handler: async (ctx, args) => {
+    const workspace = await ctx.db.get(args.workspaceId);
+    if (!workspace) return { success: false };
+
+    const now = Date.now();
+    const usage = workspace.usage ?? {
+      aiCallsThisMonth: 0,
+      aiCallsLimit: DEFAULT_AI_LIMIT,
+      lastResetAt: now,
+    };
+
+    // Reset if month has passed
+    const shouldReset = now - usage.lastResetAt > MONTH_MS;
+
+    await ctx.db.patch(args.workspaceId, {
+      usage: {
+        aiCallsThisMonth: shouldReset ? 1 : usage.aiCallsThisMonth + 1,
+        aiCallsLimit: usage.aiCallsLimit || DEFAULT_AI_LIMIT,
+        lastResetAt: shouldReset ? now : usage.lastResetAt,
+      },
+      updatedAt: now,
+    });
+
+    return { success: true };
+  },
+});
+
+export const setAiLimit = mutation({
+  args: {
+    workspaceId: v.id("workspaces"),
+    limit: v.number(), // 0 = unlimited
+  },
+  handler: async (ctx, args) => {
+    const workspace = await ctx.db.get(args.workspaceId);
+    if (!workspace) return;
+
+    const now = Date.now();
+    const usage = workspace.usage ?? {
+      aiCallsThisMonth: 0,
+      aiCallsLimit: DEFAULT_AI_LIMIT,
+      lastResetAt: now,
+    };
+
+    await ctx.db.patch(args.workspaceId, {
+      usage: {
+        ...usage,
+        aiCallsLimit: args.limit,
+      },
+      updatedAt: now,
+    });
+  },
+});

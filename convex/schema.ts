@@ -23,6 +23,15 @@ export default defineSchema({
       aiExtractionEnabled: v.boolean(),
     }),
 
+    // Usage tracking
+    usage: v.optional(
+      v.object({
+        aiCallsThisMonth: v.number(),
+        aiCallsLimit: v.number(), // 0 = unlimited
+        lastResetAt: v.number(),
+      })
+    ),
+
     createdAt: v.number(),
     updatedAt: v.number(),
   })
