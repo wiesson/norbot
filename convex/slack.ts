@@ -472,6 +472,44 @@ export const handleThreadReply = internalAction({
 });
 
 // ===========================================
+// GITHUB PR UPDATES (called by webhook)
+// ===========================================
+
+export const postPRUpdate = internalAction({
+  args: {
+    displayId: v.string(),
+    prNumber: v.number(),
+    prUrl: v.string(),
+    prTitle: v.string(),
+    action: v.union(v.literal("opened"), v.literal("merged")),
+  },
+  handler: async (ctx, args) => {
+    // Find task by display ID to get its Slack thread
+    const task = await ctx.runQuery(internal.github.getTaskByDisplayId, {
+      displayId: args.displayId,
+    });
+
+    if (!task?.source?.slackChannelId || !task?.source?.slackThreadTs) {
+      console.log("No Slack thread found for task:", args.displayId);
+      return;
+    }
+
+    let message: string;
+    if (args.action === "opened") {
+      message = `🎉 *Claude opened PR #${args.prNumber}*: ${args.prTitle}\n→ ${args.prUrl}`;
+    } else {
+      message = `✅ *PR #${args.prNumber} merged!* ${args.displayId} is now complete.`;
+    }
+
+    await sendSlackMessage({
+      channelId: task.source.slackChannelId,
+      threadTs: task.source.slackThreadTs,
+      text: message,
+    });
+  },
+});
+
+// ===========================================
 // SLACK API HELPER
 // ===========================================
 
@@ -523,4 +561,126 @@ async function sendSlackMessage(params: {
     console.error("Slack API error:", data.error);
   }
   return data;
+}
+
+// ===========================================
+// ONBOARDING: CHANNEL FUNCTIONS
+// ===========================================
+
+export const listBotChannels = internalAction({
+  args: { workspaceId: v.id("workspaces") },
+  handler: async (ctx, args): Promise<SlackChannel[]> => {
+    const token = process.env.SLACK_BOT_TOKEN;
+    if (!token) {
+      throw new Error("SLACK_BOT_TOKEN not configured");
+    }
+
+    // Fetch all channels (public and private that bot has access to)
+    const response = await fetch(
+      "https://slack.com/api/conversations.list?types=public_channel,private_channel&limit=200",
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+      }
+    );
+
+    const data = await response.json();
+    if (!data.ok) {
+      throw new Error(`Slack API error: ${data.error}`);
+    }
+
+    // Filter to channels where bot is a member
+    return data.channels
+      .filter((ch: SlackApiChannel) => ch.is_member)
+      .map((ch: SlackApiChannel) => ({
+        id: ch.id,
+        name: ch.name,
+        isPrivate: ch.is_private,
+        numMembers: ch.num_members,
+        topic: ch.topic?.value || "",
+      }));
+  },
+});
+
+export const configureChannels = internalMutation({
+  args: {
+    workspaceId: v.id("workspaces"),
+    channels: v.array(
+      v.object({
+        slackChannelId: v.string(),
+        slackChannelName: v.string(),
+        settings: v.object({
+          autoExtractTasks: v.boolean(),
+          mentionRequired: v.boolean(),
+        }),
+      })
+    ),
+  },
+  handler: async (ctx, args) => {
+    const now = Date.now();
+    const created: string[] = [];
+
+    for (const channel of args.channels) {
+      // Check if mapping already exists
+      const existing = await ctx.db
+        .query("channelMappings")
+        .withIndex("by_slack_channel", (q) =>
+          q.eq("slackChannelId", channel.slackChannelId)
+        )
+        .first();
+
+      if (existing) {
+        // Update existing mapping
+        await ctx.db.patch(existing._id, {
+          slackChannelName: channel.slackChannelName,
+          settings: {
+            ...existing.settings,
+            autoExtractTasks: channel.settings.autoExtractTasks,
+            mentionRequired: channel.settings.mentionRequired,
+          },
+          updatedAt: now,
+        });
+      } else {
+        // Create new mapping
+        const id = await ctx.db.insert("channelMappings", {
+          workspaceId: args.workspaceId,
+          slackChannelId: channel.slackChannelId,
+          slackChannelName: channel.slackChannelName,
+          settings: {
+            autoExtractTasks: channel.settings.autoExtractTasks,
+            mentionRequired: channel.settings.mentionRequired,
+          },
+          isActive: true,
+          createdAt: now,
+          updatedAt: now,
+        });
+        created.push(id);
+      }
+    }
+
+    return created;
+  },
+});
+
+// ===========================================
+// TYPES
+// ===========================================
+
+interface SlackApiChannel {
+  id: string;
+  name: string;
+  is_private: boolean;
+  is_member: boolean;
+  num_members: number;
+  topic?: { value: string };
+}
+
+export interface SlackChannel {
+  id: string;
+  name: string;
+  isPrivate: boolean;
+  numMembers: number;
+  topic: string;
 }

@@ -9,6 +9,9 @@ import {
   createProjectTool,
   listProjectsTool,
   findProjectTool,
+  sendToGitHubTool,
+  linkRepoTool,
+  listReposTool,
 } from "./tools";
 
 // ===========================================
@@ -61,6 +64,9 @@ export const fixbotAgent = new Agent(components.agent, {
     createProject: createProjectTool,
     listProjects: listProjectsTool,
     findProject: findProjectTool,
+    sendToGitHub: sendToGitHubTool,
+    linkRepo: linkRepoTool,
+    listRepos: listReposTool,
   },
   instructions: `You are Fixbot, an AI assistant for a development team's internal task management system in Slack.
 
@@ -100,6 +106,21 @@ You decide what to do based on the user's message:
 
 7. **List Projects** → Use \`listProjects\` tool
    - Triggers: "list projects", "show projects", "what projects"
+
+8. **Send to GitHub / Fix with Claude** → Use \`sendToGitHub\` tool
+   - Triggers: "fix TM-42", "send TM-42 to GitHub", "claude fix TM-42", "send to claude"
+   - Creates GitHub issue with @claude mention for automatic fixing
+   - Requires: task must have a project linked to a repository
+   - Responds with issue URL and confirmation Claude is working on it
+
+9. **Link Repository** → Use \`linkRepo\` tool
+   - Triggers: "add repo github.com/...", "connect repo", "link repo to TM"
+   - Links a GitHub repository to a project or workspace
+   - Format: "link repo github.com/owner/repo" or "link repo github.com/owner/repo to TM"
+
+10. **List Repositories** → Use \`listRepos\` tool
+    - Triggers: "show repos", "list repositories", "what repos"
+    - Shows all linked GitHub repositories
 
 ## Project Detection for Tasks
 

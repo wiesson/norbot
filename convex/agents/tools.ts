@@ -266,3 +266,120 @@ export const findProjectTool = createTool({
     return result;
   },
 });
+
+// ===========================================
+// SEND TO GITHUB TOOL
+// ===========================================
+
+interface SendToGitHubResult {
+  success: boolean;
+  issueNumber?: number;
+  issueUrl?: string;
+  repositoryName?: string;
+  error?: string;
+}
+
+export const sendToGitHubTool = createTool({
+  description:
+    "Create a GitHub issue from a task and @mention Claude to automatically fix it. Use when user says 'fix TM-42', 'send to GitHub', 'claude fix this'. Requires the task's project to have a linked repository.",
+  args: z.object({
+    displayId: z.string().describe("The task display ID (e.g., TM-42, FIX-123)"),
+    workspaceId: z.string().describe("The workspace ID"),
+    slackUserId: z.string().describe("The Slack user ID (to get their GitHub token)"),
+  }),
+  handler: async (ctx, args): Promise<SendToGitHubResult> => {
+    // Find task by display ID
+    const task = await ctx.runQuery(internal.github.getTaskByDisplayId, {
+      displayId: args.displayId,
+    });
+
+    if (!task) {
+      return { success: false, error: `Task ${args.displayId} not found` };
+    }
+
+    // Find user by Slack ID
+    const user = await ctx.runQuery(internal.tools.getUserBySlackId, {
+      slackUserId: args.slackUserId,
+    });
+
+    if (!user) {
+      return { success: false, error: "User not found. Please link your GitHub account first." };
+    }
+
+    // Create GitHub issue
+    const result = await ctx.runAction(internal.github.createIssue, {
+      taskId: task._id,
+      userId: user._id,
+    });
+
+    return result;
+  },
+});
+
+// ===========================================
+// LINK REPOSITORY TOOL
+// ===========================================
+
+interface LinkRepoResult {
+  success: boolean;
+  repositoryId?: string;
+  fullName?: string;
+  linkedToProject?: boolean;
+  error?: string;
+}
+
+export const linkRepoTool = createTool({
+  description:
+    "Link a GitHub repository to a project or workspace. Use when user says 'add repo', 'connect repo', 'link repo'. Format: github.com/owner/repo",
+  args: z.object({
+    repoUrl: z.string().describe("GitHub repo URL (e.g., github.com/owner/repo)"),
+    projectId: z.string().optional().describe("Optional project ID to link the repo to"),
+    workspaceId: z.string().describe("The workspace ID"),
+    slackUserId: z.string().describe("The Slack user ID (to verify repo access)"),
+  }),
+  handler: async (ctx, args): Promise<LinkRepoResult> => {
+    // Find user by Slack ID
+    const user = await ctx.runQuery(internal.tools.getUserBySlackId, {
+      slackUserId: args.slackUserId,
+    });
+
+    if (!user) {
+      return { success: false, error: "User not found. Please link your GitHub account first." };
+    }
+
+    const result = await ctx.runAction(internal.github.linkRepositoryToProject, {
+      repoUrl: args.repoUrl,
+      workspaceId: args.workspaceId as Id<"workspaces">,
+      projectId: args.projectId ? (args.projectId as Id<"projects">) : undefined,
+      userId: user._id,
+    });
+
+    return result;
+  },
+});
+
+// ===========================================
+// LIST REPOSITORIES TOOL
+// ===========================================
+
+interface ListReposResult {
+  repositories: Array<{
+    id: string;
+    name: string;
+    fullName: string;
+    defaultBranch: string;
+  }>;
+}
+
+export const listReposTool = createTool({
+  description: "List all repositories linked to the workspace. Use when user asks 'show repos', 'list repositories'.",
+  args: z.object({
+    workspaceId: z.string().describe("The workspace ID"),
+  }),
+  handler: async (ctx, args): Promise<ListReposResult> => {
+    const repositories = await ctx.runQuery(internal.github.listRepositoriesForWorkspace, {
+      workspaceId: args.workspaceId as Id<"workspaces">,
+    });
+    return { repositories };
+  },
+});

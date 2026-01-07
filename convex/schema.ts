@@ -35,6 +35,7 @@ export default defineSchema({
 
   projects: defineTable({
     workspaceId: v.id("workspaces"),
+    repositoryId: v.optional(v.id("repositories")), // Linked GitHub repo
 
     // Identity
     shortCode: v.string(), // "TM", "ACME" - used in task IDs like TM-123
@@ -47,7 +48,8 @@ export default defineSchema({
     updatedAt: v.number(),
   })
     .index("by_workspace", ["workspaceId"])
-    .index("by_workspace_and_code", ["workspaceId", "shortCode"]),
+    .index("by_workspace_and_code", ["workspaceId", "shortCode"])
+    .index("by_repository", ["repositoryId"]),
 
   // ===========================================
   // PROJECT COUNTERS (for per-project task numbering)
@@ -144,6 +146,15 @@ export default defineSchema({
         email: v.boolean(),
       }),
     }),
+
+    // Onboarding state
+    onboarding: v.optional(
+      v.object({
+        completedAt: v.optional(v.number()),
+        skippedSteps: v.array(v.string()),
+        currentStep: v.optional(v.string()),
+      })
+    ),
 
     isActive: v.boolean(),
     lastSeenAt: v.optional(v.number()),
@@ -265,6 +276,18 @@ export default defineSchema({
         branchName: v.optional(v.string()),
         commitSha: v.optional(v.string()),
         errorMessage: v.optional(v.string()),
+      })
+    ),
+
+    // GitHub Integration (when sent to GitHub for fixing)
+    githubIntegration: v.optional(
+      v.object({
+        issueNumber: v.optional(v.number()),
+        issueUrl: v.optional(v.string()),
+        pullRequestNumber: v.optional(v.number()),
+        pullRequestUrl: v.optional(v.string()),
+        sentAt: v.optional(v.number()),
+        sentByUserId: v.optional(v.id("users")),
       })
     ),
 

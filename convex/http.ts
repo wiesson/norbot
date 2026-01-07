@@ -118,13 +118,80 @@ http.route({
         slackBotUserId: data.bot_user_id,
       });
 
-      // Redirect to success page
+      // Redirect to setup wizard
       const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
-      return Response.redirect(`${appUrl}/workspaces/new?slack=connected`, 302);
+      return Response.redirect(`${appUrl}/setup?step=channels&slack=connected`, 302);
     } catch (error) {
       console.error("Slack OAuth error:", error);
       return new Response("OAuth failed", { status: 500 });
     }
+  }),
+});
+
+// ===========================================
+// GITHUB WEBHOOK (PR updates from Claude)
+// ===========================================
+
+http.route({
+  path: "/github/webhook",
+  method: "POST",
+  handler: httpAction(async (ctx, request) => {
+    const event = request.headers.get("x-github-event");
+    const payload = await request.json();
+
+    // TODO: Verify webhook signature with secret
+    // const signature = request.headers.get("x-hub-signature-256");
+
+    if (event === "pull_request") {
+      const action = payload.action;
+      const pr = payload.pull_request;
+      const body = pr.body || "";
+
+      // Extract task ID from PR body (TM-42, FIX-123, etc.)
+      const taskIdMatch = body.match(/\*\*Task:\*\*\s*([A-Z]+-\d+)/);
+      if (!taskIdMatch) {
+        // Not a PR created from Fixbot, ignore
+        return new Response("OK", { status: 200 });
+      }
+
+      const displayId = taskIdMatch[1];
+
+      if (action === "opened") {
+        // Claude opened a PR! Update task with PR info
+        await ctx.runMutation(internal.github.updateTaskWithPR, {
+          displayId,
+          pullRequestNumber: pr.number,
+          pullRequestUrl: pr.html_url,
+        });
+
+        // Post to Slack thread
+        await ctx.scheduler.runAfter(0, internal.slack.postPRUpdate, {
+          displayId,
+          prNumber: pr.number,
+          prUrl: pr.html_url,
+          prTitle: pr.title,
+          action: "opened",
+        });
+      }
+
+      if (action === "closed" && pr.merged) {
+        // PR was merged! Mark task as done
+        await ctx.runMutation(internal.github.markTaskMerged, {
+          displayId,
+        });
+
+        // Post to Slack thread
+        await ctx.scheduler.runAfter(0, internal.slack.postPRUpdate, {
+          displayId,
+          prNumber: pr.number,
+          prUrl: pr.html_url,
+          prTitle: pr.title,
+          action: "merged",
+        });
+      }
+    }
+
+    return new Response("OK", { status: 200 });
   }),
 });
 

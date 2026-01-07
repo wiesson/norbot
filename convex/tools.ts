@@ -110,6 +110,18 @@ export const getChannelMappingById = internalQuery({
   },
 });
 
+export const getUserBySlackId = internalQuery({
+  args: {
+    slackUserId: v.string(),
+  },
+  handler: async (ctx, args) => {
+    return await ctx.db
+      .query("users")
+      .withIndex("by_slack_user_id", (q) => q.eq("slackUserId", args.slackUserId))
+      .first();
+  },
+});
+
 // ===========================================
 // INTERNAL MUTATIONS FOR AI TOOLS
 // ===========================================
