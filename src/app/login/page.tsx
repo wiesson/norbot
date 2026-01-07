@@ -7,7 +7,7 @@ export default function LoginPage() {
     <div className="min-h-screen flex items-center justify-center bg-linear-to-br from-neutral-50 to-neutral-100 dark:from-neutral-950 dark:to-neutral-900">
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
-          <CardTitle className="text-2xl font-bold">Herbot</CardTitle>
+          <CardTitle className="text-2xl font-bold">Norbot</CardTitle>
           <CardDescription>AI-powered task management with Claude Code integration</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">

@@ -1,6 +1,6 @@
 import { cookies } from "next/headers";
 
-const SESSION_COOKIE_NAME = "herbot_session";
+const SESSION_COOKIE_NAME = "norbot_session";
 
 export async function getSessionToken(): Promise<string | null> {
   const cookieStore = await cookies();

@@ -50,11 +50,11 @@ Also extract any code context if mentioned:
 });
 
 // ===========================================
-// HERBOT AGENT (with interactive tools)
+// NORBOT AGENT (with interactive tools)
 // ===========================================
 
-export const herbotAgent = new Agent(components.agent, {
-  name: "Herbot Assistant",
+export const norbotAgent = new Agent(components.agent, {
+  name: "Norbot Assistant",
   languageModel: google("models/gemini-3-pro-preview"),
   tools: {
     summarizeTasks: summarizeTasksTool,
@@ -68,7 +68,7 @@ export const herbotAgent = new Agent(components.agent, {
     linkRepo: linkRepoTool,
     listRepos: listReposTool,
   },
-  instructions: `You are Herbot, an AI assistant for a development team's internal task management system in Slack.
+  instructions: `You are Norbot, an AI assistant for a development team's internal task management system in Slack.
 
 ## CRITICAL RULES
 - ALWAYS respond in English, even if the user writes in another language (you can understand German, etc.)

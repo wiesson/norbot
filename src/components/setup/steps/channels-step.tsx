@@ -55,7 +55,7 @@ export function ChannelsStep({ channels, isLoading, onComplete, onSkip }: Channe
         </div>
         <CardTitle>Select Channels</CardTitle>
         <CardDescription>
-          Choose which Slack channels Herbot should monitor for tasks
+          Choose which Slack channels Norbot should monitor for tasks
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -63,7 +63,7 @@ export function ChannelsStep({ channels, isLoading, onComplete, onSkip }: Channe
           <div className="text-center py-8 text-muted-foreground">
             <p>No channels found.</p>
             <p className="text-sm mt-2">
-              Invite Herbot to channels in Slack first, then refresh.
+              Invite Norbot to channels in Slack first, then refresh.
             </p>
           </div>
         ) : (

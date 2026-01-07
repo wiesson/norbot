@@ -103,7 +103,7 @@ export async function GET(request: NextRequest) {
 
     // Redirect to dashboard with session cookie
     const response = NextResponse.redirect(new URL("/", request.url));
-    response.cookies.set("herbot_session", sessionToken, {
+    response.cookies.set("norbot_session", sessionToken, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
       sameSite: "lax",

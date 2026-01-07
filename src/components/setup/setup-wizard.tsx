@@ -234,7 +234,7 @@ export function SetupWizard({ user }: SetupWizardProps) {
             </div>
             <CardTitle>Setup Complete!</CardTitle>
             <CardDescription>
-              Herbot is ready to help you manage tasks from Slack
+              Norbot is ready to help you manage tasks from Slack
             </CardDescription>
           </CardHeader>
           <CardContent>

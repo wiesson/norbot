@@ -1,12 +1,12 @@
-# Herbot
+# Norbot
 
-AI-powered task management from Slack. Mention @Herbot in any channel to automatically extract tasks, prioritize them, and add them to your Kanban board.
+AI-powered task management from Slack. Mention @Norbot in any channel to automatically extract tasks, prioritize them, and add them to your Kanban board.
 
-**Live at [herbot.vercel.app](https://herbot.vercel.app)**
+**Live at [norbot.vercel.app](https://norbot.vercel.app)**
 
 ## Features
 
-- **Slack Integration**: @mention Herbot to create tasks from any message
+- **Slack Integration**: @mention Norbot to create tasks from any message
 - **AI Task Extraction**: Automatically extracts title, priority, type, and code context
 - **Kanban Dashboard**: Visual task board with drag-and-drop (coming soon)
 - **Multi-Workspace**: Support multiple Slack teams with separate repos
@@ -81,10 +81,10 @@ Open [http://localhost:3000](http://localhost:3000)
 
 1. **Login** with GitHub
 2. **Create a workspace** (connects to your Slack team)
-3. **Invite Herbot** to a channel: `/invite @Herbot`
-4. **Create tasks**: `@Herbot The login button is broken on mobile`
+3. **Invite Norbot** to a channel: `/invite @Norbot`
+4. **Create tasks**: `@Norbot The login button is broken on mobile`
 
-Herbot will:
+Norbot will:
 
 - Extract task details using AI
 - Create a task in your Kanban board
