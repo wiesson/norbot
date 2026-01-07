@@ -75,7 +75,7 @@ export const getMembers = query({
               joinedAt: m.joinedAt,
               name: user.name,
               email: user.email,
-              avatarUrl: user.avatarUrl,
+              avatarUrl: user.avatarUrl ?? null,
               githubUsername: user.githubUsername,
             }
           : null;
