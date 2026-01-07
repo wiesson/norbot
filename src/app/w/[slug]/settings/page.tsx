@@ -284,7 +284,7 @@ export default function WorkspaceSettingsPage({ params }: WorkspaceSettingsPageP
                   >
                     <div className="flex items-center gap-3">
                       <Avatar className="h-10 w-10">
-                        <AvatarImage src={member.avatarUrl} alt={member.name} />
+                        <AvatarImage src={member.avatarUrl ?? undefined} alt={member.name} />
                         <AvatarFallback>{member.name?.[0] ?? "?"}</AvatarFallback>
                       </Avatar>
                       <div>
