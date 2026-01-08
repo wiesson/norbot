@@ -681,7 +681,7 @@ export const getAvailableChannels = action({
   args: { workspaceId: v.id("workspaces") },
   handler: async (ctx, args): Promise<SlackChannel[]> => {
     // Verify workspace exists
-    const workspace = await ctx.runQuery(api.workspaces.get, { id: args.workspaceId });
+    const workspace = await ctx.runQuery(api.workspaces.getById, { id: args.workspaceId });
     if (!workspace) {
       throw new Error("Workspace not found");
     }
