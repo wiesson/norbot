@@ -111,6 +111,7 @@ export default function WorkspaceSettingsPage({ params }: WorkspaceSettingsPageP
   const updateChannelMapping = useMutation(api.channelMappings.update);
   const createChannelMapping = useMutation(api.channelMappings.create);
   const removeChannelMapping = useMutation(api.channelMappings.remove);
+  const resetOnboarding = useMutation(api.users.resetOnboarding);
 
   // Actions
   const listUserRepos = useAction(api.github.listUserRepos);
@@ -198,6 +199,13 @@ export default function WorkspaceSettingsPage({ params }: WorkspaceSettingsPageP
     if (workspace) {
       await deleteWorkspace({ id: workspace._id });
       router.push("/");
+    }
+  };
+
+  const handleRestartSetup = async () => {
+    if (user) {
+      await resetOnboarding({ userId: user._id });
+      router.push("/setup");
     }
   };
 
@@ -372,6 +380,15 @@ export default function WorkspaceSettingsPage({ params }: WorkspaceSettingsPageP
                   month: "long",
                   day: "numeric",
                 })}
+              </p>
+            </div>
+
+            <div className="pt-4 border-t">
+              <Button variant="outline" onClick={handleRestartSetup}>
+                Restart Setup Wizard
+              </Button>
+              <p className="text-sm text-muted-foreground mt-1">
+                Re-run the onboarding setup to reconfigure Slack and GitHub
               </p>
             </div>
           </CardContent>
