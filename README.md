@@ -1,21 +1,28 @@
 # Norbot
 
-AI-powered task management from Slack. Mention @Norbot in any channel to automatically extract tasks, prioritize them, and add them to your Kanban board.
+Turn messages into tasks. Let AI research or fix them.
+
+Slack first, other sources (WhatsApp, email) coming soon.
 
 **Live at [norbot.vercel.app](https://norbot.vercel.app)**
 
-## Features
+## Why "Norbot"?
 
-- **Slack Bot**: @mention Norbot to create tasks, update status, assign, and summarize
-- **Projects**: Organize tasks with short codes (TM-123), keywords for auto-detection
-- **Channel Mappings**: Link Slack channels to GitHub repos and projects
-- **AI Task Extraction**: Extracts title, priority, type, and asks clarifying questions
-- **GitHub Integration**: Create issues with @claude mention, link repos to projects
-- **Kanban Dashboard**: Visual task board organized by status
-- **Team Management**: Invite members, assign roles (admin/member/viewer)
-- **Thread Context**: Bot understands full thread history when mentioned in replies
-- **File Attachments**: Screenshots and files from Slack attached to tasks
-- **AI Usage Limits**: Per-workspace monthly limits
+Named after the German "Norbert" — the grumpy government clerk who sighs deeply when you hand him your paperwork, but somehow always gets it done on time.
+
+That's the vibe. You message Norbot about a bug, it might ask a few clarifying questions (with mild exasperation), but it'll extract the task, add it to your board, and if you want — send AI to research or fix it.
+
+## What it does
+
+- **Slack Bot**: Mention @Norbot to create tasks, update status, assign work, get summaries
+- **AI Task Extraction**: Pulls out title, priority, type from natural conversation
+- **Kanban Board**: Visual task management, organized by status
+- **AI Resolution**: Coming soon — AI researches the issue or attempts a fix
+- **Projects**: Organize with short codes (TM-123), auto-detect by keywords
+- **GitHub Integration**: Create issues, link repos to projects
+- **Team Management**: Invite members, assign roles
+- **Thread Context**: Understands full conversation history
+- **File Attachments**: Screenshots from Slack attached to tasks
 
 ## How It Works
 
