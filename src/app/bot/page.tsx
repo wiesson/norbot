@@ -150,7 +150,7 @@ export default function BotPage() {
               </div>
             )}
           </div>
-        </ScrollArea>
+        </div>
 
         {/* Input Area */}
         <div 
