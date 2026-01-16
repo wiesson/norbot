@@ -21,6 +21,7 @@ import type * as slack from "../slack.js";
 import type * as tasks from "../tasks.js";
 import type * as tools from "../tools.js";
 import type * as users from "../users.js";
+import type * as web from "../web.js";
 import type * as workspaces from "../workspaces.js";
 
 import type {
@@ -43,6 +44,7 @@ declare const fullApi: ApiFromModules<{
   tasks: typeof tasks;
   tools: typeof tools;
   users: typeof users;
+  web: typeof web;
   workspaces: typeof workspaces;
 }>;
 
