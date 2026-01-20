@@ -12,6 +12,7 @@ import {
   CheckSquare,
   GitPullRequest,
   MessageSquare,
+  Loader2,
 } from "lucide-react";
 import type { Id } from "@convex/_generated/dataModel";
 
@@ -41,6 +42,10 @@ interface Task {
 interface TaskCardProps {
   task: Task;
   onClick?: () => void;
+  isDragging?: boolean;
+  isDragOverlay?: boolean;
+  isPending?: boolean;
+  isOptimistic?: boolean;
 }
 
 const priorityColors = {
@@ -66,16 +71,31 @@ const taskTypeColors = {
   question: "text-amber-500",
 };
 
-export function TaskCard({ task, onClick }: TaskCardProps) {
+export function TaskCard({
+  task,
+  onClick,
+  isDragging = false,
+  isDragOverlay = false,
+  isPending = false,
+  isOptimistic = false,
+}: TaskCardProps) {
   const TypeIcon = taskTypeIcons[task.taskType];
 
   return (
     <Card
       className={cn(
         "cursor-pointer hover:border-emerald-400 hover:shadow-sm transition-all",
-        "bg-white dark:bg-neutral-900"
+        "bg-white dark:bg-neutral-900",
+        // Dragging state - the original card becomes semi-transparent
+        isDragging && "opacity-50 border-dashed border-2 border-emerald-400",
+        // Drag overlay state - the card being dragged
+        isDragOverlay && "shadow-xl rotate-2 scale-105 border-emerald-400",
+        // Pending state - mutation in progress
+        isPending && "animate-pulse",
+        // Optimistic state - not yet confirmed by server
+        isOptimistic && "border-dashed border-2 border-blue-400"
       )}
-      onClick={onClick}
+      onClick={isDragging ? undefined : onClick}
     >
       <CardHeader className="p-3 pb-0">
         <div className="flex items-start justify-between gap-2">
@@ -129,8 +149,16 @@ export function TaskCard({ task, onClick }: TaskCardProps) {
         {/* Footer */}
         <div className="flex items-center justify-between mt-2 pt-2 border-t">
           <div className="flex items-center gap-2">
+            {/* Optimistic/Saving indicator */}
+            {(isOptimistic || isPending) && (
+              <span className="text-[10px] text-blue-500 flex items-center gap-0.5">
+                <Loader2 className="h-3 w-3 animate-spin" />
+                Saving...
+              </span>
+            )}
+
             {/* Source indicator */}
-            {task.source.type === "slack" && task.source.slackChannelName && (
+            {!isOptimistic && !isPending && task.source.type === "slack" && task.source.slackChannelName && (
               <span className="text-[10px] text-muted-foreground flex items-center gap-0.5">
                 <MessageSquare className="h-3 w-3" />#
                 {task.source.slackChannelName}
@@ -138,7 +166,7 @@ export function TaskCard({ task, onClick }: TaskCardProps) {
             )}
 
             {/* Claude Code status */}
-            {task.claudeCodeExecution && (
+            {!isOptimistic && !isPending && task.claudeCodeExecution && (
               <span
                 className={cn("text-[10px] flex items-center gap-0.5", {
                   "text-yellow-500":

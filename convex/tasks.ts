@@ -150,6 +150,7 @@ export const create = mutation({
   args: {
     workspaceId: v.id("workspaces"),
     repositoryId: v.optional(v.id("repositories")),
+    projectId: v.optional(v.id("projects")),
     title: v.string(),
     description: v.optional(v.string()),
     priority: v.union(
@@ -165,6 +166,15 @@ export const create = mutation({
       v.literal("task"),
       v.literal("question")
     ),
+    status: v.optional(
+      v.union(
+        v.literal("backlog"),
+        v.literal("todo"),
+        v.literal("in_progress"),
+        v.literal("in_review")
+      )
+    ),
+    dueDate: v.optional(v.number()),
     source: v.object({
       type: v.union(v.literal("slack"), v.literal("manual"), v.literal("github"), v.literal("api")),
       slackChannelId: v.optional(v.string()),
@@ -230,13 +240,15 @@ export const create = mutation({
     const taskId = await ctx.db.insert("tasks", {
       workspaceId: args.workspaceId,
       repositoryId: args.repositoryId,
+      projectId: args.projectId,
       taskNumber,
       displayId,
       title: args.title,
       description: args.description,
-      status: "backlog",
+      status: args.status ?? "backlog",
       priority: args.priority,
       taskType: args.taskType,
+      dueDate: args.dueDate,
       source: args.source,
       codeContext: args.codeContext,
       aiExtraction: args.aiExtraction,

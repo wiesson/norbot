@@ -1,11 +1,25 @@
 "use client";
 
+import { useState, useMemo, useCallback } from "react";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@convex/_generated/api";
+import {
+  DndContext,
+  DragOverlay,
+  PointerSensor,
+  TouchSensor,
+  useSensor,
+  useSensors,
+  type DragStartEvent,
+  type DragEndEvent,
+  type DragOverEvent,
+} from "@dnd-kit/core";
 import { KanbanColumn } from "./kanban-column";
-import type { Id } from "@convex/_generated/dataModel";
-import { useState } from "react";
+import { TaskCard } from "./task-card";
 import { TaskDetailModal } from "./task-detail-modal";
+import { TaskCreateModal } from "./task-create-modal";
+import { optimisticStatusUpdate } from "@/lib/optimistic-updates";
+import type { Id } from "@convex/_generated/dataModel";
 
 interface KanbanBoardProps {
   workspaceId: Id<"workspaces">;
@@ -23,16 +37,153 @@ const columns = [
 
 type ColumnKey = (typeof columns)[number]["key"];
 
-export function KanbanBoard({ workspaceId, repositoryId, projectId }: KanbanBoardProps) {
-  const [selectedTaskId, setSelectedTaskId] = useState<Id<"tasks"> | null>(null);
+interface Task {
+  _id: Id<"tasks">;
+  displayId: string;
+  title: string;
+  description?: string;
+  priority: "critical" | "high" | "medium" | "low";
+  taskType: "bug" | "feature" | "improvement" | "task" | "question";
+  labels: string[];
+  projectShortCode?: string;
+  status: ColumnKey;
+  source: {
+    type: "slack" | "manual" | "github" | "api";
+    slackChannelName?: string;
+  };
+  claudeCodeExecution?: {
+    status: "pending" | "running" | "completed" | "failed";
+    pullRequestUrl?: string;
+  };
+  assignee?: {
+    name: string;
+    avatarUrl?: string;
+  };
+}
 
-  const kanbanData = useQuery(api.tasks.getKanban, {
-    workspaceId,
-    repositoryId,
-    projectId,
+export function KanbanBoard({ workspaceId, repositoryId, projectId }: KanbanBoardProps) {
+  // Modal states
+  const [selectedTaskId, setSelectedTaskId] = useState<Id<"tasks"> | null>(null);
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [createModalStatus, setCreateModalStatus] = useState<
+    "backlog" | "todo" | "in_progress" | "in_review"
+  >("backlog");
+
+  // Drag state
+  const [activeTask, setActiveTask] = useState<Task | null>(null);
+
+  // Query arguments for optimistic updates
+  const kanbanArgs = useMemo(
+    () => ({ workspaceId, repositoryId, projectId }),
+    [workspaceId, repositoryId, projectId]
+  );
+
+  const kanbanData = useQuery(api.tasks.getKanban, kanbanArgs);
+
+  // Mutation with optimistic update
+  const updateStatus = useMutation(api.tasks.updateStatus).withOptimisticUpdate(
+    (localStore, { id, status }) => {
+      optimisticStatusUpdate(localStore, kanbanArgs, id, status);
+    }
+  );
+
+  // Sensors for drag detection
+  const pointerSensor = useSensor(PointerSensor, {
+    activationConstraint: {
+      distance: 8, // 8px movement required to start drag
+    },
   });
 
-  const updateStatus = useMutation(api.tasks.updateStatus);
+  const touchSensor = useSensor(TouchSensor, {
+    activationConstraint: {
+      delay: 200, // 200ms hold required for touch drag
+      tolerance: 5,
+    },
+  });
+
+  const sensors = useSensors(pointerSensor, touchSensor);
+
+  // Find task by ID across all columns
+  const findTaskById = useCallback(
+    (taskId: Id<"tasks">): Task | undefined => {
+      if (!kanbanData) return undefined;
+      for (const columnKey of Object.keys(kanbanData.columns) as ColumnKey[]) {
+        const found = kanbanData.columns[columnKey].find((t) => t._id === taskId);
+        if (found) return found as Task;
+      }
+      return undefined;
+    },
+    [kanbanData]
+  );
+
+  // Drag handlers
+  const handleDragStart = useCallback(
+    (event: DragStartEvent) => {
+      const { active } = event;
+      const taskId = active.id as Id<"tasks">;
+      const task = findTaskById(taskId);
+      if (task) {
+        setActiveTask(task);
+      }
+    },
+    [findTaskById]
+  );
+
+  const handleDragOver = useCallback((event: DragOverEvent) => {
+    // Could be used for preview animations during drag
+  }, []);
+
+  const handleDragEnd = useCallback(
+    (event: DragEndEvent) => {
+      const { active, over } = event;
+      setActiveTask(null);
+
+      if (!over) return;
+
+      const taskId = active.id as Id<"tasks">;
+      let newStatus: ColumnKey | undefined;
+
+      // Check if dropped over a column
+      if (columns.some((col) => col.key === over.id)) {
+        newStatus = over.id as ColumnKey;
+      } else {
+        // Dropped over another task - get its column
+        const overTask = findTaskById(over.id as Id<"tasks">);
+        if (overTask) {
+          newStatus = overTask.status;
+        }
+      }
+
+      if (!newStatus) return;
+
+      // Find current task status
+      const currentTask = findTaskById(taskId);
+      if (!currentTask || currentTask.status === newStatus) return;
+
+      // Update the task status
+      updateStatus({ id: taskId, status: newStatus });
+    },
+    [findTaskById, updateStatus]
+  );
+
+  const handleDragCancel = useCallback(() => {
+    setActiveTask(null);
+  }, []);
+
+  // Task click handler
+  const handleTaskClick = useCallback((taskId: Id<"tasks">) => {
+    setSelectedTaskId(taskId);
+  }, []);
+
+  const handleCloseModal = useCallback(() => {
+    setSelectedTaskId(null);
+  }, []);
+
+  // Add task handler - opens create modal for specific column
+  const handleAddTask = useCallback((status: "backlog" | "todo" | "in_progress" | "in_review") => {
+    setCreateModalStatus(status);
+    setIsCreateModalOpen(true);
+  }, []);
 
   if (!kanbanData) {
     return (
@@ -42,28 +193,38 @@ export function KanbanBoard({ workspaceId, repositoryId, projectId }: KanbanBoar
     );
   }
 
-  const handleTaskClick = (taskId: Id<"tasks">) => {
-    setSelectedTaskId(taskId);
-  };
-
-  const handleCloseModal = () => {
-    setSelectedTaskId(null);
-  };
-
   return (
     <>
-      <div className="flex gap-4 overflow-x-auto pb-4 scroll-px-4 sm:scroll-px-6 lg:scroll-px-8">
-        {columns.map((column) => (
-          <KanbanColumn
-            key={column.key}
-            title={column.title}
-            status={column.key}
-            color={column.color}
-            tasks={kanbanData.columns[column.key] || []}
-            onTaskClick={handleTaskClick}
-          />
-        ))}
-      </div>
+      <DndContext
+        sensors={sensors}
+        onDragStart={handleDragStart}
+        onDragOver={handleDragOver}
+        onDragEnd={handleDragEnd}
+        onDragCancel={handleDragCancel}
+      >
+        <div className="flex gap-4 overflow-x-auto pb-4 scroll-px-4 sm:scroll-px-6 lg:scroll-px-8">
+          {columns.map((column) => (
+            <KanbanColumn
+              key={column.key}
+              title={column.title}
+              status={column.key}
+              color={column.color}
+              tasks={kanbanData.columns[column.key] || []}
+              onTaskClick={handleTaskClick}
+              onAddTask={
+                column.key !== "done"
+                  ? () => handleAddTask(column.key as "backlog" | "todo" | "in_progress" | "in_review")
+                  : undefined
+              }
+            />
+          ))}
+        </div>
+
+        {/* Drag Overlay - the ghost card that follows the cursor */}
+        <DragOverlay>
+          {activeTask ? <TaskCard task={activeTask} isDragOverlay /> : null}
+        </DragOverlay>
+      </DndContext>
 
       {/* Stats Bar */}
       <div className="mt-4 flex items-center gap-4 text-sm text-muted-foreground">
@@ -76,6 +237,16 @@ export function KanbanBoard({ workspaceId, repositoryId, projectId }: KanbanBoar
 
       {/* Task Detail Modal */}
       {selectedTaskId && <TaskDetailModal taskId={selectedTaskId} onClose={handleCloseModal} />}
+
+      {/* Task Create Modal */}
+      <TaskCreateModal
+        open={isCreateModalOpen}
+        onOpenChange={setIsCreateModalOpen}
+        workspaceId={workspaceId}
+        repositoryId={repositoryId}
+        projectId={projectId}
+        initialStatus={createModalStatus}
+      />
     </>
   );
 }

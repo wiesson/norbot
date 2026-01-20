@@ -1,7 +1,9 @@
 "use client";
 
+import { useDroppable } from "@dnd-kit/core";
+import { SortableContext, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { cn } from "@/lib/utils";
-import { TaskCard } from "./task-card";
+import { SortableTaskCard } from "./sortable-task-card";
 import { Plus } from "lucide-react";
 import type { Id } from "@convex/_generated/dataModel";
 
@@ -51,8 +53,23 @@ export function KanbanColumn({
   onTaskClick,
   onAddTask,
 }: KanbanColumnProps) {
+  const { setNodeRef, isOver } = useDroppable({
+    id: status,
+    data: {
+      type: "column",
+      status,
+    },
+  });
+
+  const taskIds = tasks.map((task) => task._id);
+
   return (
-    <div className="flex flex-col min-w-[280px] w-[280px] bg-neutral-100 dark:bg-neutral-900 rounded-lg">
+    <div
+      className={cn(
+        "flex flex-col min-w-[280px] w-[280px] bg-neutral-100 dark:bg-neutral-900 rounded-lg transition-all",
+        isOver && "ring-2 ring-emerald-400 ring-inset bg-emerald-50/50 dark:bg-emerald-900/20"
+      )}
+    >
       {/* Column Header */}
       <div className="p-3 border-b border-neutral-200 dark:border-neutral-800">
         <div className="flex items-center justify-between">
@@ -65,7 +82,7 @@ export function KanbanColumn({
               {tasks.length}
             </span>
           </div>
-          {onAddTask && status === "backlog" && (
+          {onAddTask && (
             <button
               onClick={onAddTask}
               className="p-1 rounded hover:bg-neutral-200 dark:hover:bg-neutral-800 text-muted-foreground hover:text-foreground transition-colors"
@@ -77,20 +94,26 @@ export function KanbanColumn({
       </div>
 
       {/* Tasks List */}
-      <div className="flex-1 p-2 space-y-2 overflow-y-auto max-h-[calc(100vh-220px)]">
-        {tasks.length === 0 ? (
-          <div className="text-center py-8 text-sm text-muted-foreground">
-            No tasks
-          </div>
-        ) : (
-          tasks.map((task) => (
-            <TaskCard
-              key={task._id}
-              task={task}
-              onClick={() => onTaskClick?.(task._id)}
-            />
-          ))
-        )}
+      <div
+        ref={setNodeRef}
+        className="flex-1 p-2 space-y-2 overflow-y-auto max-h-[calc(100vh-220px)]"
+      >
+        <SortableContext items={taskIds} strategy={verticalListSortingStrategy}>
+          {tasks.length === 0 ? (
+            <div className="text-center py-8 text-sm text-muted-foreground">
+              {isOver ? "Drop here" : "No tasks"}
+            </div>
+          ) : (
+            tasks.map((task) => (
+              <SortableTaskCard
+                key={task._id}
+                task={task}
+                onClick={() => onTaskClick?.(task._id)}
+                isOptimistic={task.displayId === "..."}
+              />
+            ))
+          )}
+        </SortableContext>
       </div>
     </div>
   );
