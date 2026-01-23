@@ -84,7 +84,7 @@ export function TaskCard({
   return (
     <Card
       className={cn(
-        "cursor-pointer hover:border-emerald-400 hover:shadow-sm transition-all",
+        "cursor-pointer hover:border-emerald-400 hover:shadow-sm transition-all py-0 gap-0",
         "bg-white dark:bg-neutral-900",
         // Dragging state - the original card becomes semi-transparent
         isDragging && "opacity-50 border-dashed border-2 border-emerald-400",
