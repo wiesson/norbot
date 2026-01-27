@@ -653,3 +653,477 @@ function getLabelsForTask(task: { taskType: string; priority: string }): string[
 
   return labels;
 }
+
+// ===========================================
+// CLOSE GITHUB ISSUE
+// ===========================================
+
+export const closeIssue = internalAction({
+  args: {
+    taskId: v.id("tasks"),
+    userId: v.id("users"),
+  },
+  handler: async (ctx, args): Promise<{ success: boolean; error?: string }> => {
+    const task = await ctx.runQuery(internal.github.getTaskWithContext, {
+      taskId: args.taskId,
+    });
+
+    if (!task || !task.githubIntegration?.issueNumber) {
+      return { success: false, error: "Task not found or no linked GitHub issue" };
+    }
+
+    // Get repository
+    let repository = null;
+    if (task.project?.repositoryId) {
+      repository = await ctx.runQuery(internal.github.getRepository, {
+        repositoryId: task.project.repositoryId,
+      });
+    }
+
+    if (!repository) {
+      return { success: false, error: "No repository linked to project" };
+    }
+
+    // Get user's GitHub token
+    const token = await ctx.runQuery(internal.github.getUserGithubToken, {
+      userId: args.userId,
+    });
+    if (!token) {
+      return { success: false, error: "GitHub not connected" };
+    }
+
+    try {
+      const response = await fetch(
+        `https://api.github.com/repos/${repository.fullName}/issues/${task.githubIntegration.issueNumber}`,
+        {
+          method: "PATCH",
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+            Accept: "application/vnd.github.v3+json",
+            "User-Agent": "Norbot",
+          },
+          body: JSON.stringify({
+            state: "closed",
+          }),
+        }
+      );
+
+      if (!response.ok) {
+        const error = await response.json();
+        return { success: false, error: `GitHub API error: ${error.message || response.statusText}` };
+      }
+
+      return { success: true };
+    } catch (error) {
+      return {
+        success: false,
+        error: `Failed to close issue: ${error instanceof Error ? error.message : "Unknown error"}`,
+      };
+    }
+  },
+});
+
+// ===========================================
+// REOPEN GITHUB ISSUE
+// ===========================================
+
+export const reopenIssue = internalAction({
+  args: {
+    taskId: v.id("tasks"),
+    userId: v.id("users"),
+  },
+  handler: async (ctx, args): Promise<{ success: boolean; error?: string }> => {
+    const task = await ctx.runQuery(internal.github.getTaskWithContext, {
+      taskId: args.taskId,
+    });
+
+    if (!task || !task.githubIntegration?.issueNumber) {
+      return { success: false, error: "Task not found or no linked GitHub issue" };
+    }
+
+    // Get repository
+    let repository = null;
+    if (task.project?.repositoryId) {
+      repository = await ctx.runQuery(internal.github.getRepository, {
+        repositoryId: task.project.repositoryId,
+      });
+    }
+
+    if (!repository) {
+      return { success: false, error: "No repository linked to project" };
+    }
+
+    // Get user's GitHub token
+    const token = await ctx.runQuery(internal.github.getUserGithubToken, {
+      userId: args.userId,
+    });
+    if (!token) {
+      return { success: false, error: "GitHub not connected" };
+    }
+
+    try {
+      const response = await fetch(
+        `https://api.github.com/repos/${repository.fullName}/issues/${task.githubIntegration.issueNumber}`,
+        {
+          method: "PATCH",
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+            Accept: "application/vnd.github.v3+json",
+            "User-Agent": "Norbot",
+          },
+          body: JSON.stringify({
+            state: "open",
+          }),
+        }
+      );
+
+      if (!response.ok) {
+        const error = await response.json();
+        return { success: false, error: `GitHub API error: ${error.message || response.statusText}` };
+      }
+
+      return { success: true };
+    } catch (error) {
+      return {
+        success: false,
+        error: `Failed to reopen issue: ${error instanceof Error ? error.message : "Unknown error"}`,
+      };
+    }
+  },
+});
+
+// ===========================================
+// CREATE TASK FROM GITHUB ISSUE
+// ===========================================
+
+export const createTaskFromGithubIssue = internalAction({
+  args: {
+    repositoryFullName: v.string(),
+    issueNumber: v.number(),
+    issueUrl: v.string(),
+    issueTitle: v.string(),
+    issueBody: v.optional(v.string()),
+    labels: v.array(v.string()),
+    state: v.string(),
+  },
+  handler: async (
+    ctx,
+    args
+  ): Promise<{ success: boolean; taskId?: string; displayId?: string; error?: string }> => {
+    // Find repository by fullName
+    const repository = await ctx.runQuery(internal.github.getRepositoryByFullName, {
+      fullName: args.repositoryFullName,
+    });
+
+    if (!repository) {
+      return { success: false, error: `Repository not found: ${args.repositoryFullName}` };
+    }
+
+    // Find project linked to this repository
+    const projectLink = await ctx.runQuery(internal.github.getProjectForRepository, {
+      repositoryId: repository._id,
+    });
+
+    if (!projectLink) {
+      return { success: false, error: "No project linked to this repository" };
+    }
+
+    const project = await ctx.runQuery(internal.github.getProjectById, {
+      projectId: projectLink.projectId,
+    });
+
+    if (!project?.githubSync?.enabled || !project.githubSync.autoCreateTasks) {
+      return { success: false, error: "GitHub sync not enabled for this project" };
+    }
+
+    // Check if task already exists for this issue
+    const existingTask = await ctx.runQuery(internal.github.getTaskByGitHubIssue, {
+      issueNumber: args.issueNumber,
+      repositoryId: repository._id,
+    });
+
+    if (existingTask) {
+      return {
+        success: true,
+        taskId: existingTask._id,
+        displayId: existingTask.displayId,
+        error: "Task already exists for this issue",
+      };
+    }
+
+    // Map GitHub labels to task type and priority
+    const taskType = mapLabelsToTaskType(args.labels);
+    const priority = mapLabelsToPriority(args.labels);
+
+    // Create the task
+    const result = await ctx.runMutation(internal.github.createTaskInternal, {
+      workspaceId: project.workspaceId,
+      projectId: project._id,
+      repositoryId: repository._id,
+      title: args.issueTitle,
+      description: args.issueBody,
+      taskType,
+      priority,
+      status: args.state === "closed" ? "done" : "todo",
+      source: {
+        type: "github",
+        githubIssueNumber: args.issueNumber,
+        githubIssueUrl: args.issueUrl,
+      },
+      githubIntegration: {
+        issueNumber: args.issueNumber,
+        issueUrl: args.issueUrl,
+      },
+    });
+
+    return { success: true, taskId: result.taskId, displayId: result.displayId };
+  },
+});
+
+// ===========================================
+// UPDATE TASK STATUS FROM GITHUB
+// ===========================================
+
+export const updateTaskStatusFromGitHub = internalMutation({
+  args: {
+    issueNumber: v.number(),
+    repositoryFullName: v.string(),
+    newState: v.string(),
+  },
+  handler: async (ctx, args) => {
+    // Find repository by fullName
+    const repository = await ctx.db
+      .query("repositories")
+      .filter((q) => q.eq(q.field("fullName"), args.repositoryFullName))
+      .first();
+
+    if (!repository) return;
+
+    // Find task with this GitHub issue
+    const tasks = await ctx.db
+      .query("tasks")
+      .withIndex("by_repository", (q) => q.eq("repositoryId", repository._id))
+      .collect();
+
+    const task = tasks.find((t) => t.githubIntegration?.issueNumber === args.issueNumber);
+    if (!task) return;
+
+    // Check if project has sync enabled
+    if (task.projectId) {
+      const project = await ctx.db.get(task.projectId);
+      if (!project?.githubSync?.enabled || !project.githubSync.syncStatus) {
+        return;
+      }
+    }
+
+    // Map GitHub state to task status
+    const now = Date.now();
+    const oldStatus = task.status;
+    const newStatus = args.newState === "closed" ? "done" : "in_progress";
+
+    // Don't update if already in the expected state
+    if (
+      (args.newState === "closed" && task.status === "done") ||
+      (args.newState === "open" && task.status !== "done" && task.status !== "cancelled")
+    ) {
+      return;
+    }
+
+    await ctx.db.patch(task._id, {
+      status: newStatus,
+      updatedAt: now,
+      ...(newStatus === "done" ? { completedAt: now } : {}),
+    });
+
+    await ctx.db.insert("taskActivity", {
+      taskId: task._id,
+      activityType: "status_changed",
+      changes: {
+        field: "status",
+        oldValue: oldStatus,
+        newValue: newStatus,
+      },
+      metadata: { source: "github_webhook" },
+      createdAt: now,
+    });
+  },
+});
+
+// ===========================================
+// ADDITIONAL INTERNAL QUERIES FOR GITHUB SYNC
+// ===========================================
+
+export const getRepositoryByFullName = internalQuery({
+  args: { fullName: v.string() },
+  handler: async (ctx, args) => {
+    return await ctx.db
+      .query("repositories")
+      .filter((q) => q.eq(q.field("fullName"), args.fullName))
+      .first();
+  },
+});
+
+export const getProjectForRepository = internalQuery({
+  args: { repositoryId: v.id("repositories") },
+  handler: async (ctx, args) => {
+    return await ctx.db
+      .query("projectRepositories")
+      .withIndex("by_repository", (q) => q.eq("repositoryId", args.repositoryId))
+      .first();
+  },
+});
+
+export const getProjectById = internalQuery({
+  args: { projectId: v.id("projects") },
+  handler: async (ctx, args) => {
+    return await ctx.db.get(args.projectId);
+  },
+});
+
+export const getTaskByGitHubIssue = internalQuery({
+  args: {
+    issueNumber: v.number(),
+    repositoryId: v.id("repositories"),
+  },
+  handler: async (ctx, args) => {
+    const tasks = await ctx.db
+      .query("tasks")
+      .withIndex("by_repository", (q) => q.eq("repositoryId", args.repositoryId))
+      .collect();
+
+    return tasks.find((t) => t.githubIntegration?.issueNumber === args.issueNumber);
+  },
+});
+
+// ===========================================
+// INTERNAL MUTATION FOR CREATING TASKS
+// ===========================================
+
+export const createTaskInternal = internalMutation({
+  args: {
+    workspaceId: v.id("workspaces"),
+    projectId: v.id("projects"),
+    repositoryId: v.id("repositories"),
+    title: v.string(),
+    description: v.optional(v.string()),
+    taskType: v.union(
+      v.literal("bug"),
+      v.literal("feature"),
+      v.literal("improvement"),
+      v.literal("task"),
+      v.literal("question")
+    ),
+    priority: v.union(
+      v.literal("critical"),
+      v.literal("high"),
+      v.literal("medium"),
+      v.literal("low")
+    ),
+    status: v.union(
+      v.literal("backlog"),
+      v.literal("todo"),
+      v.literal("in_progress"),
+      v.literal("in_review"),
+      v.literal("done")
+    ),
+    source: v.object({
+      type: v.literal("github"),
+      githubIssueNumber: v.number(),
+      githubIssueUrl: v.string(),
+    }),
+    githubIntegration: v.object({
+      issueNumber: v.number(),
+      issueUrl: v.string(),
+    }),
+  },
+  handler: async (ctx, args) => {
+    const now = Date.now();
+
+    // Get project for displayId prefix
+    const project = await ctx.db.get(args.projectId);
+    if (!project) throw new Error("Project not found");
+
+    // Get or create counter for task numbering (per project)
+    let counter = await ctx.db
+      .query("projectCounters")
+      .withIndex("by_project_and_type", (q) =>
+        q.eq("projectId", args.projectId).eq("counterType", "task_number")
+      )
+      .first();
+
+    let taskNumber: number;
+    if (counter) {
+      taskNumber = counter.currentValue + 1;
+      await ctx.db.patch(counter._id, { currentValue: taskNumber });
+    } else {
+      taskNumber = 1;
+      await ctx.db.insert("projectCounters", {
+        projectId: args.projectId,
+        counterType: "task_number",
+        currentValue: 1,
+      });
+    }
+
+    const displayId = `${project.shortCode}-${taskNumber}`;
+
+    const taskId = await ctx.db.insert("tasks", {
+      workspaceId: args.workspaceId,
+      repositoryId: args.repositoryId,
+      projectId: args.projectId,
+      taskNumber,
+      displayId,
+      title: args.title,
+      description: args.description,
+      status: args.status,
+      priority: args.priority,
+      taskType: args.taskType,
+      source: args.source,
+      githubIntegration: {
+        issueNumber: args.githubIntegration.issueNumber,
+        issueUrl: args.githubIntegration.issueUrl,
+        sentAt: now,
+      },
+      labels: [],
+      createdAt: now,
+      updatedAt: now,
+    });
+
+    await ctx.db.insert("taskActivity", {
+      taskId,
+      activityType: "created",
+      metadata: { source: "github_webhook" },
+      createdAt: now,
+    });
+
+    return { taskId, displayId };
+  },
+});
+
+// ===========================================
+// HELPER FUNCTIONS FOR LABEL MAPPING
+// ===========================================
+
+function mapLabelsToTaskType(
+  labels: string[]
+): "bug" | "feature" | "improvement" | "task" | "question" {
+  const labelsLower = labels.map((l) => l.toLowerCase());
+
+  if (labelsLower.includes("bug")) return "bug";
+  if (labelsLower.includes("feature") || labelsLower.includes("enhancement")) return "feature";
+  if (labelsLower.includes("improvement")) return "improvement";
+  if (labelsLower.includes("question")) return "question";
+
+  return "task";
+}
+
+function mapLabelsToPriority(labels: string[]): "critical" | "high" | "medium" | "low" {
+  const labelsLower = labels.map((l) => l.toLowerCase());
+
+  if (labelsLower.some((l) => l.includes("critical"))) return "critical";
+  if (labelsLower.some((l) => l.includes("high") || l.includes("urgent"))) return "high";
+  if (labelsLower.some((l) => l.includes("low"))) return "low";
+
+  return "medium";
+}

@@ -1,5 +1,6 @@
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
+import { internal } from "./_generated/api";
 
 // ===========================================
 // QUERIES
@@ -267,6 +268,18 @@ export const create = mutation({
       createdAt: now,
     });
 
+    // Auto-create GitHub issue if project has githubSync enabled
+    if (args.projectId && args.createdById) {
+      const project = await ctx.db.get(args.projectId);
+      if (project?.githubSync?.enabled && project.githubSync.autoCreateIssues) {
+        // Schedule GitHub issue creation
+        await ctx.scheduler.runAfter(0, internal.github.createIssue, {
+          taskId,
+          userId: args.createdById,
+        });
+      }
+    }
+
     return { taskId, displayId };
   },
 });
@@ -308,6 +321,34 @@ export const updateStatus = mutation({
       },
       createdAt: now,
     });
+
+    // Sync status to GitHub if enabled and task has linked issue
+    if (task.projectId && task.githubIntegration?.issueNumber && args.userId) {
+      const project = await ctx.db.get(task.projectId);
+      if (project?.githubSync?.enabled && project.githubSync.syncStatus) {
+        // Determine if we need to close or reopen the issue
+        const shouldClose =
+          (args.status === "done" || args.status === "cancelled") &&
+          oldStatus !== "done" &&
+          oldStatus !== "cancelled";
+
+        const shouldReopen =
+          (args.status !== "done" && args.status !== "cancelled") &&
+          (oldStatus === "done" || oldStatus === "cancelled");
+
+        if (shouldClose) {
+          await ctx.scheduler.runAfter(0, internal.github.closeIssue, {
+            taskId: args.id,
+            userId: args.userId,
+          });
+        } else if (shouldReopen) {
+          await ctx.scheduler.runAfter(0, internal.github.reopenIssue, {
+            taskId: args.id,
+            userId: args.userId,
+          });
+        }
+      }
+    }
   },
 });
 

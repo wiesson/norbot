@@ -223,6 +223,9 @@ http.route({
     // TODO: Verify webhook signature with secret
     // const signature = request.headers.get("x-hub-signature-256");
 
+    // ===========================================
+    // PULL REQUEST EVENTS
+    // ===========================================
     if (event === "pull_request") {
       const action = payload.action;
       const pr = payload.pull_request;
@@ -269,6 +272,61 @@ http.route({
           prTitle: pr.title,
           action: "merged",
         });
+      }
+    }
+
+    // ===========================================
+    // ISSUES EVENTS (Bidirectional sync)
+    // ===========================================
+    if (event === "issues") {
+      const action = payload.action;
+      const issue = payload.issue;
+      const repository = payload.repository;
+      const repositoryFullName = repository.full_name;
+
+      // Handle issue opened - create task in fixbot
+      if (action === "opened") {
+        // Check if this issue was created by Norbot (has our marker in body)
+        const body = issue.body || "";
+        if (body.includes("*Created by Norbot from Slack*")) {
+          // This issue was created by us, don't create a duplicate task
+          return new Response("OK", { status: 200 });
+        }
+
+        // Schedule task creation from GitHub issue
+        await ctx.scheduler.runAfter(0, internal.github.createTaskFromGithubIssue, {
+          repositoryFullName,
+          issueNumber: issue.number,
+          issueUrl: issue.html_url,
+          issueTitle: issue.title,
+          issueBody: issue.body || undefined,
+          labels: issue.labels?.map((l: { name: string }) => l.name) || [],
+          state: issue.state,
+        });
+      }
+
+      // Handle issue closed - update task status to done
+      if (action === "closed") {
+        await ctx.runMutation(internal.github.updateTaskStatusFromGitHub, {
+          issueNumber: issue.number,
+          repositoryFullName,
+          newState: "closed",
+        });
+      }
+
+      // Handle issue reopened - update task status to in_progress
+      if (action === "reopened") {
+        await ctx.runMutation(internal.github.updateTaskStatusFromGitHub, {
+          issueNumber: issue.number,
+          repositoryFullName,
+          newState: "open",
+        });
+      }
+
+      // Handle issue edited - optionally sync title/description
+      if (action === "edited") {
+        // Could add title/description sync here if needed
+        // For now, we only sync status changes
       }
     }
 

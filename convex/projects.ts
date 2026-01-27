@@ -281,3 +281,41 @@ export const unlinkRepository = mutation({
     }
   },
 });
+
+// ===========================================
+// GITHUB SYNC SETTINGS
+// ===========================================
+
+export const updateGitHubSync = mutation({
+  args: {
+    projectId: v.id("projects"),
+    githubSync: v.object({
+      enabled: v.boolean(),
+      autoCreateIssues: v.boolean(),
+      autoCreateTasks: v.boolean(),
+      syncStatus: v.boolean(),
+    }),
+  },
+  handler: async (ctx, args) => {
+    const project = await ctx.db.get(args.projectId);
+    if (!project) throw new Error("Project not found");
+
+    await ctx.db.patch(args.projectId, {
+      githubSync: args.githubSync,
+      updatedAt: Date.now(),
+    });
+  },
+});
+
+export const getGitHubSync = query({
+  args: { projectId: v.id("projects") },
+  handler: async (ctx, args) => {
+    const project = await ctx.db.get(args.projectId);
+    return project?.githubSync ?? {
+      enabled: false,
+      autoCreateIssues: false,
+      autoCreateTasks: false,
+      syncStatus: false,
+    };
+  },
+});

@@ -56,6 +56,16 @@ export default defineSchema({
     // Auto-detection hints for bot routing
     keywords: v.optional(v.array(v.string())), // ["ios", "swift", "mobile"]
 
+    // GitHub sync settings
+    githubSync: v.optional(
+      v.object({
+        enabled: v.boolean(),
+        autoCreateIssues: v.boolean(), // task → issue
+        autoCreateTasks: v.boolean(), // issue → task
+        syncStatus: v.boolean(), // bidirectional status sync
+      })
+    ),
+
     isActive: v.boolean(),
     createdAt: v.number(),
     updatedAt: v.number(),
