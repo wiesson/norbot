@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, useMemo, useCallback } from "react";
+import { useState, useMemo, useCallback, useRef, useEffect } from "react";
 import { useQuery, useMutation } from "convex/react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { api } from "@convex/_generated/api";
 import {
   DndContext,
@@ -20,6 +21,7 @@ import { TaskDetailModal } from "./task-detail-modal";
 import { TaskCreateModal } from "./task-create-modal";
 import { optimisticStatusUpdate } from "@/lib/optimistic-updates";
 import type { Id } from "@convex/_generated/dataModel";
+import type { KanbanTask, KanbanArgs, ColumnKey } from "@/lib/types";
 
 interface KanbanBoardProps {
   workspaceId: Id<"workspaces">;
@@ -35,57 +37,56 @@ const columns = [
   { key: "done", title: "Done", color: "emerald" },
 ] as const;
 
-type ColumnKey = (typeof columns)[number]["key"];
-
-interface Task {
-  _id: Id<"tasks">;
-  displayId: string;
-  title: string;
-  description?: string;
-  priority: "critical" | "high" | "medium" | "low";
-  taskType: "bug" | "feature" | "improvement" | "task" | "question";
-  labels: string[];
-  projectShortCode?: string;
-  status: ColumnKey;
-  source: {
-    type: "slack" | "manual" | "github" | "api";
-    slackChannelName?: string;
-  };
-  claudeCodeExecution?: {
-    status: "pending" | "running" | "completed" | "failed";
-    pullRequestUrl?: string;
-  };
-  assignee?: {
-    name: string;
-    avatarUrl?: string;
-  };
-}
-
 export function KanbanBoard({ workspaceId, repositoryId, projectId }: KanbanBoardProps) {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+
+  // URL-based task selection (persist modal state to URL)
+  const taskIdFromUrl = searchParams.get("task") as Id<"tasks"> | null;
+
   // Modal states
-  const [selectedTaskId, setSelectedTaskId] = useState<Id<"tasks"> | null>(null);
+  const [selectedTaskId, setSelectedTaskId] = useState<Id<"tasks"> | null>(taskIdFromUrl);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [createModalStatus, setCreateModalStatus] = useState<
     "backlog" | "todo" | "in_progress" | "in_review"
   >("backlog");
 
   // Drag state
-  const [activeTask, setActiveTask] = useState<Task | null>(null);
+  const [activeTask, setActiveTask] = useState<KanbanTask | null>(null);
 
   // Query arguments for optimistic updates
-  const kanbanArgs = useMemo(
+  const kanbanArgs: KanbanArgs = useMemo(
     () => ({ workspaceId, repositoryId, projectId }),
     [workspaceId, repositoryId, projectId]
   );
 
+  // Use ref to always have current kanbanArgs in optimistic update callback
+  const kanbanArgsRef = useRef(kanbanArgs);
+  useEffect(() => {
+    kanbanArgsRef.current = kanbanArgs;
+  }, [kanbanArgs]);
+
   const kanbanData = useQuery(api.tasks.getKanban, kanbanArgs);
 
-  // Mutation with optimistic update
+  // Mutation with optimistic update - use ref to avoid stale closure
   const updateStatus = useMutation(api.tasks.updateStatus).withOptimisticUpdate(
     (localStore, { id, status }) => {
-      optimisticStatusUpdate(localStore, kanbanArgs, id, status);
+      optimisticStatusUpdate(localStore, kanbanArgsRef.current, id, status);
     }
   );
+
+  // Sync URL param when task changes
+  useEffect(() => {
+    if (selectedTaskId !== taskIdFromUrl) {
+      const params = new URLSearchParams(searchParams.toString());
+      if (selectedTaskId) {
+        params.set("task", selectedTaskId);
+      } else {
+        params.delete("task");
+      }
+      router.replace(`?${params.toString()}`, { scroll: false });
+    }
+  }, [selectedTaskId, taskIdFromUrl, router, searchParams]);
 
   // Sensors for drag detection
   const pointerSensor = useSensor(PointerSensor, {
@@ -105,11 +106,11 @@ export function KanbanBoard({ workspaceId, repositoryId, projectId }: KanbanBoar
 
   // Find task by ID across all columns
   const findTaskById = useCallback(
-    (taskId: Id<"tasks">): Task | undefined => {
+    (taskId: Id<"tasks">): KanbanTask | undefined => {
       if (!kanbanData) return undefined;
       for (const columnKey of Object.keys(kanbanData.columns) as ColumnKey[]) {
         const found = kanbanData.columns[columnKey].find((t) => t._id === taskId);
-        if (found) return found as Task;
+        if (found) return found as KanbanTask;
       }
       return undefined;
     },
@@ -149,7 +150,7 @@ export function KanbanBoard({ workspaceId, repositoryId, projectId }: KanbanBoar
       } else {
         // Dropped over another task - get its column
         const overTask = findTaskById(over.id as Id<"tasks">);
-        if (overTask) {
+        if (overTask && overTask.status !== "cancelled") {
           newStatus = overTask.status;
         }
       }

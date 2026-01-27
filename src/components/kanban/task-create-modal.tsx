@@ -24,6 +24,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
+import { toast } from "sonner";
 import {
   Bug,
   Lightbulb,
@@ -186,6 +187,7 @@ export function TaskCreateModal({
       onOpenChange(false);
     } catch (error) {
       console.error("Failed to create task:", error);
+      toast.error("Failed to create task");
     } finally {
       setIsSubmitting(false);
     }

@@ -1,6 +1,8 @@
 "use client";
 
+import { useState } from "react";
 import { useQuery, useMutation } from "convex/react";
+import { toast } from "sonner";
 import { api } from "@convex/_generated/api";
 import type { Id } from "@convex/_generated/dataModel";
 import {
@@ -32,7 +34,7 @@ import {
   MessageSquare,
   ExternalLink,
   Clock,
-  User,
+  Loader2,
 } from "lucide-react";
 
 interface TaskDetailModalProps {
@@ -75,6 +77,7 @@ const taskTypeColors = {
 export function TaskDetailModal({ taskId, onClose }: TaskDetailModalProps) {
   const task = useQuery(api.tasks.getById, { id: taskId });
   const updateStatus = useMutation(api.tasks.updateStatus);
+  const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
 
   if (!task) {
     return (
@@ -91,17 +94,25 @@ export function TaskDetailModal({ taskId, onClose }: TaskDetailModalProps) {
   const TypeIcon = taskTypeIcons[task.taskType];
 
   const handleStatusChange = async (newStatus: string | null) => {
-    if (!newStatus) return;
-    await updateStatus({
-      id: taskId,
-      status: newStatus as
-        | "backlog"
-        | "todo"
-        | "in_progress"
-        | "in_review"
-        | "done"
-        | "cancelled",
-    });
+    if (!newStatus || isUpdatingStatus) return;
+    setIsUpdatingStatus(true);
+    try {
+      await updateStatus({
+        id: taskId,
+        status: newStatus as
+          | "backlog"
+          | "todo"
+          | "in_progress"
+          | "in_review"
+          | "done"
+          | "cancelled",
+      });
+    } catch (error) {
+      console.error("Failed to update status:", error);
+      toast.error("Failed to update status");
+    } finally {
+      setIsUpdatingStatus(false);
+    }
   };
 
   return (
@@ -138,9 +149,13 @@ export function TaskDetailModal({ taskId, onClose }: TaskDetailModalProps) {
             <label className="text-sm font-medium text-muted-foreground mb-1.5 block">
               Status
             </label>
-            <Select value={task.status} onValueChange={handleStatusChange}>
+            <Select value={task.status} onValueChange={handleStatusChange} disabled={isUpdatingStatus}>
               <SelectTrigger className="w-full">
-                <SelectValue />
+                {isUpdatingStatus ? (
+                  <Loader2 className="size-4 animate-spin" />
+                ) : (
+                  <SelectValue />
+                )}
               </SelectTrigger>
               <SelectContent>
                 {Object.entries(statusLabels).map(([value, label]) => (

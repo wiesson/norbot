@@ -451,7 +451,32 @@ export default defineSchema({
       })
     ),
 
-    metadata: v.optional(v.any()),
+    metadata: v.optional(
+      v.union(
+        // For claude_code_started
+        v.object({
+          issueNumber: v.optional(v.number()),
+          issueUrl: v.optional(v.string()),
+        }),
+        // For pr_created
+        v.object({
+          pullRequestNumber: v.optional(v.number()),
+          pullRequestUrl: v.optional(v.string()),
+        }),
+        // For created, pr_merged, or status_changed from github webhook
+        v.object({
+          source: v.optional(v.string()),
+        }),
+        // For Claude code execution updates
+        v.object({
+          status: v.optional(v.string()),
+          branchName: v.optional(v.string()),
+          commitSha: v.optional(v.string()),
+          pullRequestUrl: v.optional(v.string()),
+          errorMessage: v.optional(v.string()),
+        })
+      )
+    ),
     createdAt: v.number(),
   })
     .index("by_task", ["taskId"])

@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState, useRef } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useMutation, useAction, useQuery } from "convex/react";
 import { useQuery as useTanstackQuery } from "@tanstack/react-query";
@@ -96,9 +96,13 @@ export function SetupWizard({ user }: SetupWizardProps) {
     staleTime: 5 * 60 * 1000, // Cache for 5 minutes
   });
 
+  // Track if OAuth was already processed to prevent double-step
+  const oauthProcessedRef = useRef(false);
+
   // Handle Slack OAuth return
   useEffect(() => {
-    if (slackConnected && currentStep === "channels") {
+    if (slackConnected && currentStep === "channels" && !oauthProcessedRef.current) {
+      oauthProcessedRef.current = true;
       setCompletedSteps((prev) => {
         const newSet = new Set<Step>([...prev, "github", "slack"]);
         return Array.from(newSet);

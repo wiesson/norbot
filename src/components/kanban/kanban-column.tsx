@@ -7,32 +7,12 @@ import { SortableTaskCard } from "./sortable-task-card";
 import { Plus } from "lucide-react";
 import type { Id } from "@convex/_generated/dataModel";
 
-interface Task {
-  _id: Id<"tasks">;
-  displayId: string;
-  title: string;
-  description?: string;
-  priority: "critical" | "high" | "medium" | "low";
-  taskType: "bug" | "feature" | "improvement" | "task" | "question";
-  labels: string[];
-  source: {
-    type: "slack" | "manual" | "github" | "api";
-    slackChannelName?: string;
-  };
-  claudeCodeExecution?: {
-    status: "pending" | "running" | "completed" | "failed";
-    pullRequestUrl?: string;
-  };
-  assignee?: {
-    name: string;
-    avatarUrl?: string;
-  };
-}
+import type { KanbanTask } from "@/lib/types";
 
 interface KanbanColumnProps {
   title: string;
   status: string;
-  tasks: Task[];
+  tasks: KanbanTask[];
   color: string;
   onTaskClick?: (taskId: Id<"tasks">) => void;
   onAddTask?: () => void;
@@ -109,7 +89,7 @@ export function KanbanColumn({
                 key={task._id}
                 task={task}
                 onClick={() => onTaskClick?.(task._id)}
-                isOptimistic={task.displayId === "..."}
+                isOptimistic={task._isOptimistic === true}
               />
             ))
           )}

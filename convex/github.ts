@@ -1,6 +1,32 @@
 import { v } from "convex/values";
+import { z } from "zod";
 import { action, mutation, internalAction, internalMutation, internalQuery } from "./_generated/server";
 import { internal } from "./_generated/api";
+
+// ===========================================
+// ZOD SCHEMAS FOR GITHUB API VALIDATION
+// ===========================================
+
+const GitHubRepoApiSchema = z.object({
+  id: z.number(),
+  node_id: z.string(),
+  name: z.string(),
+  full_name: z.string(),
+  clone_url: z.string(),
+  default_branch: z.string(),
+  private: z.boolean(),
+  description: z.string().nullable(),
+  updated_at: z.string(),
+});
+
+const GitHubReposApiResponseSchema = z.array(GitHubRepoApiSchema);
+
+const GitHubIssueApiResponseSchema = z.object({
+  number: z.number(),
+  html_url: z.string(),
+  title: z.string().optional(),
+  state: z.string().optional(),
+});
 
 // ===========================================
 // INTERNAL QUERIES
@@ -44,9 +70,16 @@ export const listUserRepos = action({
       throw new Error(`GitHub API error: ${response.status}`);
     }
 
-    const repos = await response.json();
+    const rawRepos = await response.json();
 
-    return repos.map((repo: GitHubApiRepo) => ({
+    // Validate GitHub API response with Zod
+    const parseResult = GitHubReposApiResponseSchema.safeParse(rawRepos);
+    if (!parseResult.success) {
+      console.error("GitHub API response validation failed:", parseResult.error);
+      throw new Error("Invalid response from GitHub API");
+    }
+
+    return parseResult.data.map((repo) => ({
       githubId: repo.id,
       githubNodeId: repo.node_id,
       name: repo.name,
@@ -230,7 +263,19 @@ export const createIssue = internalAction({
         };
       }
 
-      const issue = await response.json();
+      const rawIssue = await response.json();
+
+      // Validate GitHub issue response with Zod
+      const parseResult = GitHubIssueApiResponseSchema.safeParse(rawIssue);
+      if (!parseResult.success) {
+        console.error("GitHub issue response validation failed:", parseResult.error);
+        return {
+          success: false,
+          error: "Invalid response from GitHub API",
+        };
+      }
+
+      const issue = parseResult.data;
 
       // Update task with GitHub issue info
       await ctx.runMutation(internal.github.updateTaskGitHubIntegration, {
