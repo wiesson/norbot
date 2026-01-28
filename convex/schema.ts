@@ -525,6 +525,23 @@ export default defineSchema({
     slackThreadTs: v.string(),
     agentThreadId: v.string(), // Convex Agent framework thread ID
     status: v.union(v.literal("active"), v.literal("completed")),
+    // Persist initial context for follow-ups
+    originalText: v.optional(v.string()),
+    originalMessageTs: v.optional(v.string()),
+    originalAttachments: v.optional(
+      v.array(
+        v.object({
+          storageId: v.string(),
+          filename: v.string(),
+          mimeType: v.string(),
+          size: v.number(),
+          slackFileId: v.string(),
+        })
+      )
+    ),
+    // Track latest user message for context
+    lastUserText: v.optional(v.string()),
+    lastUserMessageTs: v.optional(v.string()),
     createdAt: v.number(),
     updatedAt: v.number(),
   })

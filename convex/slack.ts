@@ -420,6 +420,12 @@ export const handleAppMention = internalAction({
       return;
     }
 
+    const existingConversation = await ctx.runQuery(internal.slack.getAgentConversation, {
+      workspaceId: workspace._id,
+      slackChannelId: args.channelId,
+      slackThreadTs: args.threadTs,
+    });
+
     // Get channel mapping for repository/project context
     const channelMapping = await ctx.runQuery(internal.slack.getChannelMapping, {
       workspaceId: workspace._id,
@@ -487,6 +493,13 @@ export const handleAppMention = internalAction({
       }
     }
 
+    const originalText = existingConversation?.originalText ?? cleanText;
+    const originalMessageTs = existingConversation?.originalMessageTs ?? args.ts;
+    const storedAttachments =
+      existingConversation?.originalAttachments?.length
+        ? existingConversation.originalAttachments
+        : attachments;
+
     // Fetch thread context if we're replying in a thread
     let threadContext = "";
     if (args.threadTs !== args.ts) {
@@ -521,12 +534,14 @@ export const handleAppMention = internalAction({
         return;
       }
 
-      const { threadId } = await norbotAgent.createThread(ctx, {});
+      const threadId = existingConversation?.status === "active"
+        ? existingConversation.agentThreadId
+        : (await norbotAgent.createThread(ctx, {})).threadId;
 
       // Build attachments info for context
       const attachmentsInfo =
-        attachments.length > 0
-          ? `\n- attachments: ${JSON.stringify(attachments)}`
+        storedAttachments.length > 0
+          ? `\n- attachments: ${JSON.stringify(storedAttachments)}`
           : "";
 
       // Build repository context for the agent
@@ -571,7 +586,7 @@ export const handleAppMention = internalAction({
 
 User message: ${cleanText}
 
-Original text for task creation: ${cleanText}`;
+Original text for task creation: ${originalText}`;
 
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const result = await norbotAgent.generateText(ctx, { threadId }, {
@@ -604,6 +619,11 @@ Original text for task creation: ${cleanText}`;
         slackThreadTs: args.threadTs,
         agentThreadId: threadId,
         status: "active",
+        originalText,
+        originalMessageTs,
+        originalAttachments: storedAttachments,
+        lastUserText: cleanText,
+        lastUserMessageTs: args.ts,
       });
     } catch (error) {
       console.error("Agent error:", error);
@@ -661,6 +681,10 @@ export const handleThreadReply = internalAction({
           return;
         }
 
+        const originalText = conversation.originalText ?? args.text;
+        const originalMessageTs = conversation.originalMessageTs ?? args.ts;
+        const storedAttachments = conversation.originalAttachments ?? [];
+
         // Get channel mapping for context
         const channelMapping = await ctx.runQuery(
           internal.slack.getChannelMapping,
@@ -716,28 +740,36 @@ export const handleThreadReply = internalAction({
           ? `\n- linkedRepository: ${linkedRepository.fullName}`
           : "";
 
+        // Build attachments info for context
+        const attachmentsInfo =
+          storedAttachments.length > 0
+            ? `\n- attachments: ${JSON.stringify(storedAttachments)}`
+            : "";
+
         // Build project context
         const projectsInfo = workspaceProjects.length > 0
           ? `\n\nAvailable projects:\n${workspaceProjects.map(p =>
               `- ${p.name} (${p.shortCode}): keywords [${p.keywords.join(", ")}]${p.repos.length > 0 ? `, repos: ${p.repos.join(", ")}` : ""}`
             ).join("\n")}`
-          : "";
+          : "\n\nNo projects configured yet. Tasks will use generic FIX-xxx IDs.";
 
         let channelProjectInfo = "";
         if (channelDefaultProject) {
           const isStrict = channelMapping?.settings?.strictProjectMode;
           const strictInstruction = isStrict
-            ? " - STRICT MODE: Use this project."
-            : " - Default project for this channel";
+            ? " - STRICT MODE: You MUST use this project. Ignore any other project names mentioned in the text."
+            : " - Use this project for tasks from this channel unless another is explicitly mentioned";
           channelProjectInfo = `\n- channelDefaultProject: ${channelDefaultProject.name} (${channelDefaultProject.shortCode})${strictInstruction}`;
         }
 
         // Build context for follow-up with full context
         const contextInfo = `Context (use these values when calling tools):
 - source: ${JSON.stringify(sourceContext)}
-- channelName: ${channelMapping?.slackChannelName || "unknown"}${channelProjectInfo}${repoInfo}${projectsInfo}${threadContext}
+- channelName: ${channelMapping?.slackChannelName || "unknown"}${channelProjectInfo}${repoInfo}${attachmentsInfo}${projectsInfo}${threadContext}
 
-User follow-up message: ${args.text}`;
+User follow-up message: ${args.text}
+
+Original text for task creation: ${originalText}`;
 
         // Continue on the existing agent thread
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -772,6 +804,11 @@ User follow-up message: ${args.text}`;
           slackThreadTs: args.threadTs,
           agentThreadId: conversation.agentThreadId,
           status: "active",
+          originalText,
+          originalMessageTs,
+          originalAttachments: storedAttachments,
+          lastUserText: args.text,
+          lastUserMessageTs: args.ts,
         });
       } catch (error) {
         console.error("Error continuing conversation:", error);
@@ -1392,6 +1429,21 @@ export const upsertAgentConversation = internalMutation({
     slackThreadTs: v.string(),
     agentThreadId: v.string(),
     status: v.union(v.literal("active"), v.literal("completed")),
+    originalText: v.optional(v.string()),
+    originalMessageTs: v.optional(v.string()),
+    originalAttachments: v.optional(
+      v.array(
+        v.object({
+          storageId: v.string(),
+          filename: v.string(),
+          mimeType: v.string(),
+          size: v.number(),
+          slackFileId: v.string(),
+        })
+      )
+    ),
+    lastUserText: v.optional(v.string()),
+    lastUserMessageTs: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     const now = Date.now();
@@ -1407,12 +1459,34 @@ export const upsertAgentConversation = internalMutation({
       )
       .first();
 
+    const updates: Record<string, unknown> = {
+      agentThreadId: args.agentThreadId,
+      status: args.status,
+      updatedAt: now,
+    };
+
+    if (args.lastUserText) {
+      updates.lastUserText = args.lastUserText;
+    }
+    if (args.lastUserMessageTs) {
+      updates.lastUserMessageTs = args.lastUserMessageTs;
+    }
+
     if (existing) {
-      await ctx.db.patch(existing._id, {
-        agentThreadId: args.agentThreadId,
-        status: args.status,
-        updatedAt: now,
-      });
+      if (!existing.originalText && args.originalText) {
+        updates.originalText = args.originalText;
+      }
+      if (!existing.originalMessageTs && args.originalMessageTs) {
+        updates.originalMessageTs = args.originalMessageTs;
+      }
+      if (
+        (!existing.originalAttachments || existing.originalAttachments.length === 0) &&
+        args.originalAttachments
+      ) {
+        updates.originalAttachments = args.originalAttachments;
+      }
+
+      await ctx.db.patch(existing._id, updates);
       return existing._id;
     }
 
@@ -1422,6 +1496,11 @@ export const upsertAgentConversation = internalMutation({
       slackThreadTs: args.slackThreadTs,
       agentThreadId: args.agentThreadId,
       status: args.status,
+      originalText: args.originalText,
+      originalMessageTs: args.originalMessageTs,
+      originalAttachments: args.originalAttachments,
+      lastUserText: args.lastUserText,
+      lastUserMessageTs: args.lastUserMessageTs,
       createdAt: now,
       updatedAt: now,
     });
@@ -1606,56 +1685,146 @@ export const handleAssistantMessage = internalAction({
       }),
     });
 
-    // Process the message - reuse existing task extraction logic
-    // For now, provide a simple response based on the message content
-    const lowerText = args.text.toLowerCase();
-    let responseText = "";
+    // Use the same Norbot agent logic for Slack Assistant messages
+    try {
+      const usageCheck = await ctx.runQuery(internal.ai.checkUsageInternal, {
+        workspaceId: workspace._id,
+      });
 
-    if (lowerText.includes("my tasks") || lowerText.includes("current tasks")) {
-      // TODO: Query user's tasks and format response
-      responseText =
-        "To see your tasks, visit the Norbot dashboard. I'm working on showing tasks directly here!";
-    } else if (lowerText.includes("create task") || lowerText.includes("new task")) {
-      responseText =
-        "To create a task, @mention me in a channel with your task description, and I'll extract and prioritize it automatically.";
-    } else if (lowerText.includes("extract tasks")) {
-      responseText =
-        "To extract tasks from channel discussions, go to a channel and @mention me with the messages you want analyzed.";
-    } else if (lowerText.includes("status")) {
-      responseText =
-        "Task status tracking is available on the Norbot dashboard. I'll add status updates here soon!";
-    } else if (lowerText.includes("help")) {
-      responseText = `Here's what I can help you with:
+      if (!usageCheck.allowed) {
+        await sendSlackMessage({
+          token: workspace.slackBotToken ?? "",
+          channelId: args.channelId,
+          threadTs: threadTs,
+          text: "Your workspace has reached its monthly AI usage limit.",
+        });
+        return;
+      }
 
-• *Extract tasks* - @mention me in a channel to extract tasks from messages
-• *Create tasks* - Describe work that needs to be done
-• *Track progress* - Check the dashboard for task status
-• *Prioritize* - I automatically prioritize tasks based on urgency and impact
+      const conversation = await ctx.runQuery(internal.slack.getAgentConversation, {
+        workspaceId: workspace._id,
+        slackChannelId: args.channelId,
+        slackThreadTs: threadTs,
+      });
 
-Try @mentioning me in a channel to get started!`;
-    } else {
-      // Default - treat as potential task description
-      responseText = `I received your message. To create a task from this, @mention me in a channel where your team can see it.
+      const threadId = conversation?.status === "active"
+        ? conversation.agentThreadId
+        : (await norbotAgent.createThread(ctx, {})).threadId;
 
-For task management, try:
-• "Show my tasks"
-• "Create a task"
-• "Help"`;
-    }
+      const originalText = conversation?.originalText ?? args.text;
+      const originalMessageTs = conversation?.originalMessageTs ?? args.ts;
 
-    // Send the response (this clears the loading status)
-    await fetch("https://slack.com/api/chat.postMessage", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${workspace.slackBotToken}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        channel: args.channelId,
-        thread_ts: threadTs,
+      const channelMapping = await ctx.runQuery(internal.slack.getChannelMapping, {
+        workspaceId: workspace._id,
+        slackChannelId: args.channelId,
+      });
+
+      let linkedRepository: { name: string; fullName: string } | null = null;
+      if (channelMapping?.repositoryId) {
+        const repo = await ctx.runQuery(internal.github.getRepository, {
+          repositoryId: channelMapping.repositoryId,
+        });
+        if (repo) {
+          linkedRepository = { name: repo.name, fullName: repo.fullName };
+        }
+      }
+
+      const workspaceProjects = await ctx.runQuery(internal.projects.getWorkspaceContext, {
+        workspaceId: workspace._id,
+      });
+
+      let channelDefaultProject: { name: string; shortCode: string } | null = null;
+      if (channelMapping?.projectId) {
+        const project = workspaceProjects.find(p => p.id === channelMapping.projectId);
+        if (project) {
+          channelDefaultProject = { name: project.name, shortCode: project.shortCode };
+        }
+      }
+
+      const threadMessages = await fetchThreadReplies(
+        workspace.slackBotToken ?? "",
+        args.channelId,
+        threadTs
+      );
+      const threadContext = formatThreadForContext(threadMessages, args.ts);
+
+      const sourceContext = {
+        type: "slack",
+        workspaceId: workspace._id,
+        channelId: args.channelId,
+        channelName: channelMapping?.slackChannelName,
+        userId: args.userId,
+        messageTs: args.ts,
+        threadTs: threadTs,
+      };
+
+      const repoInfo = linkedRepository
+        ? `\n- linkedRepository: ${linkedRepository.fullName}`
+        : "";
+
+      const projectsInfo = workspaceProjects.length > 0
+        ? `\n\nAvailable projects:\n${workspaceProjects.map(p =>
+            `- ${p.name} (${p.shortCode}): keywords [${p.keywords.join(", ")}]${p.repos.length > 0 ? `, repos: ${p.repos.join(", ")}` : ""}`
+          ).join("\n")}`
+        : "\n\nNo projects configured yet. Tasks will use generic FIX-xxx IDs.";
+
+      let channelProjectInfo = "";
+      if (channelDefaultProject) {
+        const isStrict = channelMapping?.settings?.strictProjectMode;
+        const strictInstruction = isStrict
+          ? " - STRICT MODE: You MUST use this project. Ignore any other project names mentioned in the text."
+          : " - Use this project for tasks from this channel unless another is explicitly mentioned";
+        channelProjectInfo = `\n- channelDefaultProject: ${channelDefaultProject.name} (${channelDefaultProject.shortCode})${strictInstruction}`;
+      }
+
+      const contextInfo = `Context (use these values when calling tools):
+- source: ${JSON.stringify(sourceContext)}
+- channelName: ${channelMapping?.slackChannelName || "unknown"}${channelProjectInfo}${repoInfo}${projectsInfo}${threadContext}
+
+User message: ${args.text}
+
+Original text for task creation: ${originalText}`;
+
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const result = await norbotAgent.generateText(ctx, { threadId }, {
+        messages: [{ role: "user" as const, content: contextInfo }],
+        maxSteps: 5,
+      } as any);
+
+      await ctx.runMutation(internal.ai.incrementUsageInternal, {
+        workspaceId: workspace._id,
+      });
+
+      const responseText =
+        result.text || "I'm not sure how to help with that. Could you clarify?";
+
+      await sendSlackMessage({
+        token: workspace.slackBotToken ?? "",
+        channelId: args.channelId,
+        threadTs: threadTs,
         text: responseText,
-      }),
-    });
+      });
+
+      await ctx.runMutation(internal.slack.upsertAgentConversation, {
+        workspaceId: workspace._id,
+        slackChannelId: args.channelId,
+        slackThreadTs: threadTs,
+        agentThreadId: threadId,
+        status: "active",
+        originalText,
+        originalMessageTs,
+        lastUserText: args.text,
+        lastUserMessageTs: args.ts,
+      });
+    } catch (error) {
+      console.error("Assistant agent error:", error);
+      await sendSlackMessage({
+        token: workspace.slackBotToken ?? "",
+        channelId: args.channelId,
+        threadTs: threadTs,
+        text: "Sorry, I encountered an error processing your request. Please try again.",
+      });
+    }
   },
 });
 
