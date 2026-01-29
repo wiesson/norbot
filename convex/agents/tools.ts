@@ -211,7 +211,7 @@ export const createTaskTool = createTool({
       .string()
       .optional()
       .describe(
-        "URL where the bug or issue occurs. Required for bug and improvement task types if detected in the message."
+        "Optional URL where the bug or issue occurs. Helpful for bugs/improvements but not required."
       ),
     attachments: z
       .array(
