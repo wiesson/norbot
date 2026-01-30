@@ -19,12 +19,20 @@ export const validateApiKey = internalQuery({
     const project = await ctx.db.get(apiKey.projectId);
     if (!project) return null;
 
-    // Update last used (fire and forget via scheduler would be better)
     return {
+      apiKeyId: apiKey._id,
       workspaceId: apiKey.workspaceId,
       projectId: apiKey.projectId,
       projectShortCode: project.shortCode,
     };
+  },
+});
+
+// Update lastUsedAt for an API key (called after successful validation)
+export const updateApiKeyLastUsed = internalMutation({
+  args: { apiKeyId: v.id("apiKeys") },
+  handler: async (ctx, args) => {
+    await ctx.db.patch(args.apiKeyId, { lastUsedAt: Date.now() });
   },
 });
 

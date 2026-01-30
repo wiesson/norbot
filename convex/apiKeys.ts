@@ -1,20 +1,62 @@
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 
-// Generate a random API key
+// Generate a cryptographically secure API key
 function generateApiKey(): string {
-  const chars = "abcdefghijklmnopqrstuvwxyz0123456789";
-  let key = "nrbt_";
-  for (let i = 0; i < 32; i++) {
-    key += chars[Math.floor(Math.random() * chars.length)];
-  }
-  return key;
+  const bytes = new Uint8Array(24);
+  crypto.getRandomValues(bytes);
+  // Convert to base36 (alphanumeric) for URL-safe key
+  const key = Array.from(bytes)
+    .map((b) => b.toString(36).padStart(2, "0"))
+    .join("")
+    .slice(0, 32);
+  return `nrbt_${key}`;
+}
+
+// Helper to get current user from auth identity
+async function getCurrentUser(ctx: { db: any; auth: any }) {
+  const identity = await ctx.auth.getUserIdentity();
+  if (!identity) return null;
+
+  // Look up user by email (the identity contains the user's email)
+  const email = identity.email;
+  if (!email) return null;
+
+  return await ctx.db
+    .query("users")
+    .withIndex("by_email", (q: any) => q.eq("email", email))
+    .first();
+}
+
+// Helper to verify workspace membership
+async function verifyWorkspaceMember(
+  ctx: { db: any; auth: any },
+  workspaceId: any
+): Promise<{ userId: any; role: string } | null> {
+  const user = await getCurrentUser(ctx);
+  if (!user) return null;
+
+  const membership = await ctx.db
+    .query("workspaceMembers")
+    .withIndex("by_workspace_and_user", (q: any) =>
+      q.eq("workspaceId", workspaceId).eq("userId", user._id)
+    )
+    .first();
+
+  if (!membership) return null;
+  return { userId: user._id, role: membership.role };
 }
 
 // List API keys for a workspace
 export const list = query({
   args: { workspaceId: v.id("workspaces") },
   handler: async (ctx, args) => {
+    // Verify user is a workspace member
+    const member = await verifyWorkspaceMember(ctx, args.workspaceId);
+    if (!member) {
+      return []; // Return empty list for unauthorized users
+    }
+
     const keys = await ctx.db
       .query("apiKeys")
       .filter((q) => q.eq(q.field("workspaceId"), args.workspaceId))
@@ -49,6 +91,12 @@ export const create = mutation({
     name: v.string(),
   },
   handler: async (ctx, args) => {
+    // Verify user is a workspace member
+    const member = await verifyWorkspaceMember(ctx, args.workspaceId);
+    if (!member) {
+      throw new Error("Unauthorized");
+    }
+
     // Verify project belongs to workspace
     const project = await ctx.db.get(args.projectId);
     if (!project || project.workspaceId !== args.workspaceId) {
@@ -80,6 +128,18 @@ export const create = mutation({
 export const remove = mutation({
   args: { keyId: v.id("apiKeys") },
   handler: async (ctx, args) => {
+    // Get the key to verify workspace ownership
+    const apiKey = await ctx.db.get(args.keyId);
+    if (!apiKey) {
+      throw new Error("API key not found");
+    }
+
+    // Verify user is a workspace member
+    const member = await verifyWorkspaceMember(ctx, apiKey.workspaceId);
+    if (!member) {
+      throw new Error("Unauthorized");
+    }
+
     await ctx.db.delete(args.keyId);
   },
 });
@@ -90,6 +150,12 @@ export const getMcpConfig = query({
   handler: async (ctx, args) => {
     const apiKey = await ctx.db.get(args.keyId);
     if (!apiKey) return null;
+
+    // Verify user is a workspace member
+    const member = await verifyWorkspaceMember(ctx, apiKey.workspaceId);
+    if (!member) {
+      return null;
+    }
 
     const project = await ctx.db.get(apiKey.projectId);
 

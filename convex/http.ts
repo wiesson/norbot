@@ -389,6 +389,9 @@ http.route({
       });
     }
 
+    // Update lastUsedAt in background (fire and forget)
+    ctx.runMutation(internal.mcp.updateApiKeyLastUsed, { apiKeyId: auth.apiKeyId });
+
     const body = await request.json();
     const { action, ...args } = body;
 

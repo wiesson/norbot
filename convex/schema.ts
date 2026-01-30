@@ -512,7 +512,7 @@ export default defineSchema({
   apiKeys: defineTable({
     workspaceId: v.id("workspaces"),
     projectId: v.id("projects"), // 1 key = 1 project
-    key: v.string(), // hashed
+    key: v.string(), // full key (shown once on creation)
     keyPrefix: v.string(), // "nrbt_xxx..." for display
     name: v.string(), // "Claude Code", "Cursor", etc.
     lastUsedAt: v.optional(v.number()),

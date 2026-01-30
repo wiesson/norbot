@@ -166,7 +166,7 @@ export function ApiKeysSection({ workspaceId }: ApiKeysSectionProps) {
 
                 <div className="space-y-2">
                   <Label>Project</Label>
-                  <Select value={selectedProjectId} onValueChange={setSelectedProjectId}>
+                  <Select value={selectedProjectId} onValueChange={(value) => setSelectedProjectId(value ?? "")}>
                     <SelectTrigger>
                       <SelectValue placeholder="Select a project" />
                     </SelectTrigger>
