@@ -103,6 +103,33 @@ export const getWorkspaceContext = internalQuery({
   },
 });
 
+export const getDefaultRepository = internalQuery({
+  args: { projectId: v.id("projects") },
+  handler: async (ctx, args) => {
+    const project = await ctx.db.get(args.projectId);
+    if (!project) return null;
+
+    const links = await ctx.db
+      .query("projectRepositories")
+      .withIndex("by_project", (q) => q.eq("projectId", args.projectId))
+      .collect();
+
+    const defaultLink = links.find((link) => link.isDefault) ?? (links.length === 1 ? links[0] : null);
+    const repositoryId = defaultLink?.repositoryId;
+
+    if (!repositoryId) return null;
+
+    const repo = await ctx.db.get(repositoryId);
+    if (!repo) return null;
+
+    return {
+      repositoryId: repo._id,
+      name: repo.name,
+      fullName: repo.fullName,
+    };
+  },
+});
+
 // Find project by keyword match in message text
 export const findByKeyword = internalQuery({
   args: {

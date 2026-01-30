@@ -205,18 +205,14 @@ export const createIssue = internalAction({
       return { success: false, error: "Task not found" };
     }
 
-    // Get repository - from project or fallback to channel mapping
-    let repository = null;
-    if (task.project?.repositoryId) {
-      repository = await ctx.runQuery(internal.github.getRepository, {
-        repositoryId: task.project.repositoryId,
-      });
-    }
+    // Get repository - prefer task repository, then project default
+    const repository = await resolveRepositoryForTask(ctx, task);
 
     if (!repository) {
       return {
         success: false,
-        error: "No repository linked. Use '@norbot add repo github.com/owner/repo' first.",
+        error:
+          "No repository linked. Link a repo to the project or set a default repo before creating issues.",
       };
     }
 
@@ -608,16 +604,59 @@ export const linkProjectToRepo = internalMutation({
     repositoryId: v.id("repositories"),
   },
   handler: async (ctx, args) => {
-    await ctx.db.patch(args.projectId, {
-      repositoryId: args.repositoryId,
-      updatedAt: Date.now(),
-    });
+    const existingLink = await ctx.db
+      .query("projectRepositories")
+      .withIndex("by_project", (q) => q.eq("projectId", args.projectId))
+      .filter((q) => q.eq(q.field("repositoryId"), args.repositoryId))
+      .first();
+
+    if (!existingLink) {
+      const links = await ctx.db
+        .query("projectRepositories")
+        .withIndex("by_project", (q) => q.eq("projectId", args.projectId))
+        .collect();
+
+      const hasDefault = links.some((link) => link.isDefault);
+      const isDefault = !hasDefault && links.length === 0;
+
+      await ctx.db.insert("projectRepositories", {
+        projectId: args.projectId,
+        repositoryId: args.repositoryId,
+        isDefault,
+        createdAt: Date.now(),
+      });
+
+    }
   },
 });
 
 // ===========================================
 // HELPER FUNCTIONS
 // ===========================================
+
+async function resolveRepositoryForTask(
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  ctx: { runQuery: (query: any, args: any) => Promise<any> },
+  task: { repositoryId?: string; projectId?: string; project?: { repositoryId?: string } | null }
+): Promise<{ repositoryId: string; name: string; fullName: string } | null> {
+  if (task.repositoryId) {
+    const repo = await ctx.runQuery(internal.github.getRepository, {
+      repositoryId: task.repositoryId,
+    });
+    if (repo) {
+      return { repositoryId: repo._id, name: repo.name, fullName: repo.fullName };
+    }
+  }
+
+  if (task.projectId) {
+    const projectRepo = await ctx.runQuery(internal.projects.getDefaultRepository, {
+      projectId: task.projectId,
+    });
+    if (projectRepo) return projectRepo;
+  }
+
+  return null;
+}
 
 interface TaskForIssue {
   displayId: string;
@@ -718,15 +757,10 @@ export const closeIssue = internalAction({
     }
 
     // Get repository
-    let repository = null;
-    if (task.project?.repositoryId) {
-      repository = await ctx.runQuery(internal.github.getRepository, {
-        repositoryId: task.project.repositoryId,
-      });
-    }
+    const repository = await resolveRepositoryForTask(ctx, task);
 
     if (!repository) {
-      return { success: false, error: "No repository linked to project" };
+      return { success: false, error: "No repository linked to task or project" };
     }
 
     // Get user's GitHub token
@@ -788,15 +822,10 @@ export const reopenIssue = internalAction({
     }
 
     // Get repository
-    let repository = null;
-    if (task.project?.repositoryId) {
-      repository = await ctx.runQuery(internal.github.getRepository, {
-        repositoryId: task.project.repositoryId,
-      });
-    }
+    const repository = await resolveRepositoryForTask(ctx, task);
 
     if (!repository) {
-      return { success: false, error: "No repository linked to project" };
+      return { success: false, error: "No repository linked to task or project" };
     }
 
     // Get user's GitHub token

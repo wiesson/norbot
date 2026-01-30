@@ -1,5 +1,6 @@
 import { v } from "convex/values";
 import { internalQuery, internalMutation } from "./_generated/server";
+import { internal } from "./_generated/api";
 import { Id } from "./_generated/dataModel";
 
 // ===========================================
@@ -9,12 +10,19 @@ import { Id } from "./_generated/dataModel";
 export const getTasksForSummary = internalQuery({
   args: {
     workspaceId: v.id("workspaces"),
+    projectId: v.optional(v.id("projects")),
     repositoryId: v.optional(v.id("repositories")),
   },
   handler: async (ctx, args) => {
     let tasks;
 
-    if (args.repositoryId) {
+    if (args.projectId) {
+      tasks = await ctx.db
+        .query("tasks")
+        .withIndex("by_project", (q) => q.eq("projectId", args.projectId))
+        .filter((q) => q.neq(q.field("status"), "cancelled"))
+        .collect();
+    } else if (args.repositoryId) {
       tasks = await ctx.db
         .query("tasks")
         .withIndex("by_repository", (q) => q.eq("repositoryId", args.repositoryId))
@@ -309,13 +317,42 @@ export const createTask = internalMutation({
       .withIndex("by_slack_channel", (q) => q.eq("slackChannelId", args.slackChannelId))
       .first();
 
+    let resolvedProjectId = args.projectId;
+
+    if (!resolvedProjectId && channelMapping?.projectId) {
+      resolvedProjectId = channelMapping.projectId;
+    }
+
+    if (!resolvedProjectId) {
+      const projects = await ctx.db
+        .query("projects")
+        .withIndex("by_workspace", (q) => q.eq("workspaceId", args.workspaceId))
+        .filter((q) => q.eq(q.field("isActive"), true))
+        .collect();
+
+      if (projects.length === 1) {
+        resolvedProjectId = projects[0]._id;
+      }
+    }
+
+    let repositoryId: Id<"repositories"> | undefined;
+
+    if (resolvedProjectId) {
+      const projectRepo = await ctx.runQuery(internal.projects.getDefaultRepository, {
+        projectId: resolvedProjectId,
+      });
+      if (projectRepo?.repositoryId) {
+        repositoryId = projectRepo.repositoryId;
+      }
+    }
+
     // Determine display ID prefix and counter
     let displayId: string;
     let taskNumber: number;
 
-    if (args.projectId) {
+    if (resolvedProjectId) {
       // Project-specific counter (TM-1, TM-2, etc.)
-      const project = await ctx.db.get(args.projectId);
+      const project = await ctx.db.get(resolvedProjectId);
       if (!project) {
         return { success: false, error: "Project not found" };
       }
@@ -323,7 +360,7 @@ export const createTask = internalMutation({
       const counter = await ctx.db
         .query("projectCounters")
         .withIndex("by_project_and_type", (q) =>
-          q.eq("projectId", args.projectId!).eq("counterType", "task_number")
+          q.eq("projectId", resolvedProjectId!).eq("counterType", "task_number")
         )
         .first();
 
@@ -333,7 +370,7 @@ export const createTask = internalMutation({
       } else {
         taskNumber = 1;
         await ctx.db.insert("projectCounters", {
-          projectId: args.projectId,
+          projectId: resolvedProjectId,
           counterType: "task_number",
           currentValue: 1,
         });
@@ -372,8 +409,8 @@ export const createTask = internalMutation({
 
     const taskId = await ctx.db.insert("tasks", {
       workspaceId: args.workspaceId,
-      repositoryId: channelMapping?.repositoryId,
-      projectId: args.projectId,
+      repositoryId,
+      projectId: resolvedProjectId,
       taskNumber,
       displayId,
       title: args.title,
@@ -534,7 +571,19 @@ export const findProjectByMatch = internalQuery({
       }
     }
 
-    // 3. Name match (case-insensitive)
+    // 3. Keyword/alias match
+    for (const project of projects) {
+      const keywords = project.keywords ?? [];
+      const matched = keywords.find((kw) => searchLower.includes(kw.toLowerCase()));
+      if (matched) {
+        return {
+          project: { id: project._id, shortCode: project.shortCode, name: project.name },
+          matchType: "keyword",
+        };
+      }
+    }
+
+    // 4. Name match (case-insensitive)
     for (const project of projects) {
       if (searchLower.includes(project.name.toLowerCase())) {
         return {

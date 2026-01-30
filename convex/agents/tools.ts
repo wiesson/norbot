@@ -102,7 +102,7 @@ export const summarizeTasksTool = createTool({
     source: SourceContextSchema,
   }),
   handler: async (ctx, args): Promise<TaskSummaryResult> => {
-    let repositoryId: Id<"repositories"> | undefined;
+    let projectId: Id<"projects"> | undefined;
 
     // If coming from Slack, check if channel has a mapped repo
     if (args.source.type === "slack" && args.source.channelId) {
@@ -110,13 +110,14 @@ export const summarizeTasksTool = createTool({
         workspaceId: args.source.workspaceId as Id<"workspaces">,
         slackChannelId: args.source.channelId,
       });
-      repositoryId = channelMapping?.repositoryId;
+      projectId = channelMapping?.projectId;
     }
 
     // Query tasks for this workspace/repository
     const summary = await ctx.runQuery(internal.tools.getTasksForSummary, {
       workspaceId: args.source.workspaceId as Id<"workspaces">,
-      repositoryId,
+      projectId,
+      repositoryId: undefined,
     });
 
     return summary;
