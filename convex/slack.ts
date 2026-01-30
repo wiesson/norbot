@@ -432,29 +432,26 @@ export const handleAppMention = internalAction({
       slackChannelId: args.channelId,
     });
 
-    // Fetch repository details if channel has a linked repository
-    let linkedRepository: { name: string; fullName: string } | null = null;
-    if (channelMapping?.repositoryId) {
-      const repo = await ctx.runQuery(internal.github.getRepository, {
-        repositoryId: channelMapping.repositoryId,
-      });
-      if (repo) {
-        linkedRepository = { name: repo.name, fullName: repo.fullName };
-      }
-    }
+    const linkedRepository = await getLinkedRepositoryForChannel(ctx, channelMapping);
 
     // Get workspace projects for bot context
     const workspaceProjects = await ctx.runQuery(internal.projects.getWorkspaceContext, {
       workspaceId: workspace._id,
     });
 
-    // Get channel's default project if set
+    // Get channel's default project if set, otherwise use the only workspace project
     let channelDefaultProject: { name: string; shortCode: string } | null = null;
     if (channelMapping?.projectId) {
-      const project = workspaceProjects.find(p => p.id === channelMapping.projectId);
+      const project = workspaceProjects.find((p) => p.id === channelMapping.projectId);
       if (project) {
         channelDefaultProject = { name: project.name, shortCode: project.shortCode };
       }
+    }
+
+    let workspaceDefaultProject: { name: string; shortCode: string } | null = null;
+    if (!channelDefaultProject && workspaceProjects.length === 1) {
+      const onlyProject = workspaceProjects[0];
+      workspaceDefaultProject = { name: onlyProject.name, shortCode: onlyProject.shortCode };
     }
 
     // Clean message text (remove bot mention but keep user mentions for assignment)
@@ -551,9 +548,15 @@ export const handleAppMention = internalAction({
 
       // Build project context for the agent
       const projectsInfo = workspaceProjects.length > 0
-        ? `\n\nAvailable projects:\n${workspaceProjects.map(p =>
-            `- ${p.name} (${p.shortCode}): keywords [${p.keywords.join(", ")}]${p.repos.length > 0 ? `, repos: ${p.repos.join(", ")}` : ""}`
-          ).join("\n")}`
+        ? `\n\n- projectsMapping: ${JSON.stringify(
+            workspaceProjects.map((p) => ({
+              id: p.id,
+              name: p.name,
+              shortCode: p.shortCode,
+              aliases: p.keywords,
+              repos: p.repos,
+            }))
+          )}`
         : "\n\nNo projects configured yet. Tasks will use generic FIX-xxx IDs.";
 
       let channelProjectInfo = "";
@@ -564,6 +567,8 @@ export const handleAppMention = internalAction({
           : " - Use this project for tasks from this channel unless another is explicitly mentioned";
         
         channelProjectInfo = `\n- channelDefaultProject: ${channelDefaultProject.name} (${channelDefaultProject.shortCode})${strictInstruction}`;
+      } else if (workspaceDefaultProject) {
+        channelProjectInfo = `\n- channelDefaultProject: ${workspaceDefaultProject.name} (${workspaceDefaultProject.shortCode}) - Only project in this workspace; use it by default`;
       } else {
         channelProjectInfo = "\n- channelDefaultProject: none - Use keyword matching or ask which project";
       }
@@ -691,29 +696,26 @@ export const handleThreadReply = internalAction({
           { workspaceId: workspace._id, slackChannelId: args.channelId }
         );
 
-        // Fetch repository details if channel has a linked repository
-        let linkedRepository: { name: string; fullName: string } | null = null;
-        if (channelMapping?.repositoryId) {
-          const repo = await ctx.runQuery(internal.github.getRepository, {
-            repositoryId: channelMapping.repositoryId,
-          });
-          if (repo) {
-            linkedRepository = { name: repo.name, fullName: repo.fullName };
-          }
-        }
+        const linkedRepository = await getLinkedRepositoryForChannel(ctx, channelMapping);
 
         // Get workspace projects for bot context
         const workspaceProjects = await ctx.runQuery(internal.projects.getWorkspaceContext, {
           workspaceId: workspace._id,
         });
 
-        // Get channel's default project if set
+        // Get channel's default project if set, otherwise use the only workspace project
         let channelDefaultProject: { name: string; shortCode: string } | null = null;
         if (channelMapping?.projectId) {
-          const project = workspaceProjects.find(p => p.id === channelMapping.projectId);
+          const project = workspaceProjects.find((p) => p.id === channelMapping.projectId);
           if (project) {
             channelDefaultProject = { name: project.name, shortCode: project.shortCode };
           }
+        }
+
+        let workspaceDefaultProject: { name: string; shortCode: string } | null = null;
+        if (!channelDefaultProject && workspaceProjects.length === 1) {
+          const onlyProject = workspaceProjects[0];
+          workspaceDefaultProject = { name: onlyProject.name, shortCode: onlyProject.shortCode };
         }
 
         // Fetch thread context (including bot's own messages)
@@ -748,10 +750,16 @@ export const handleThreadReply = internalAction({
 
         // Build project context
         const projectsInfo = workspaceProjects.length > 0
-          ? `\n\nAvailable projects:\n${workspaceProjects.map(p =>
-              `- ${p.name} (${p.shortCode}): keywords [${p.keywords.join(", ")}]${p.repos.length > 0 ? `, repos: ${p.repos.join(", ")}` : ""}`
-            ).join("\n")}`
-          : "\n\nNo projects configured yet. Tasks will use generic FIX-xxx IDs.";
+          ? `\n\n- projectsMapping: ${JSON.stringify(
+              workspaceProjects.map((p) => ({
+                id: p.id,
+                name: p.name,
+                shortCode: p.shortCode,
+                aliases: p.keywords,
+                repos: p.repos,
+              }))
+            )}`
+          : "";
 
         let channelProjectInfo = "";
         if (channelDefaultProject) {
@@ -760,6 +768,8 @@ export const handleThreadReply = internalAction({
             ? " - STRICT MODE: You MUST use this project. Ignore any other project names mentioned in the text."
             : " - Use this project for tasks from this channel unless another is explicitly mentioned";
           channelProjectInfo = `\n- channelDefaultProject: ${channelDefaultProject.name} (${channelDefaultProject.shortCode})${strictInstruction}`;
+        } else if (workspaceDefaultProject) {
+          channelProjectInfo = `\n- channelDefaultProject: ${workspaceDefaultProject.name} (${workspaceDefaultProject.shortCode}) - Only project in this workspace; use it by default`;
         }
 
         // Build context for follow-up with full context
@@ -1313,6 +1323,25 @@ export const updateChannelMappingStatus = internalMutation({
   },
 });
 
+async function getLinkedRepositoryForChannel(
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  ctx: { runQuery: (query: any, args: any) => Promise<any> },
+  channelMapping: { repositoryId?: string; projectId?: string } | null
+): Promise<{ name: string; fullName: string } | null> {
+  if (!channelMapping) return null;
+
+  if (channelMapping.projectId) {
+    const projectRepo = await ctx.runQuery(internal.projects.getDefaultRepository, {
+      projectId: channelMapping.projectId,
+    });
+    if (projectRepo) {
+      return { name: projectRepo.name, fullName: projectRepo.fullName };
+    }
+  }
+
+  return null;
+}
+
 // ===========================================
 // FILE ATTACHMENTS
 // ===========================================
@@ -1719,15 +1748,7 @@ export const handleAssistantMessage = internalAction({
         slackChannelId: args.channelId,
       });
 
-      let linkedRepository: { name: string; fullName: string } | null = null;
-      if (channelMapping?.repositoryId) {
-        const repo = await ctx.runQuery(internal.github.getRepository, {
-          repositoryId: channelMapping.repositoryId,
-        });
-        if (repo) {
-          linkedRepository = { name: repo.name, fullName: repo.fullName };
-        }
-      }
+      const linkedRepository = await getLinkedRepositoryForChannel(ctx, channelMapping);
 
       const workspaceProjects = await ctx.runQuery(internal.projects.getWorkspaceContext, {
         workspaceId: workspace._id,
@@ -1735,10 +1756,16 @@ export const handleAssistantMessage = internalAction({
 
       let channelDefaultProject: { name: string; shortCode: string } | null = null;
       if (channelMapping?.projectId) {
-        const project = workspaceProjects.find(p => p.id === channelMapping.projectId);
+        const project = workspaceProjects.find((p) => p.id === channelMapping.projectId);
         if (project) {
           channelDefaultProject = { name: project.name, shortCode: project.shortCode };
         }
+      }
+
+      let workspaceDefaultProject: { name: string; shortCode: string } | null = null;
+      if (!channelDefaultProject && workspaceProjects.length === 1) {
+        const onlyProject = workspaceProjects[0];
+        workspaceDefaultProject = { name: onlyProject.name, shortCode: onlyProject.shortCode };
       }
 
       const threadMessages = await fetchThreadReplies(
@@ -1763,9 +1790,15 @@ export const handleAssistantMessage = internalAction({
         : "";
 
       const projectsInfo = workspaceProjects.length > 0
-        ? `\n\nAvailable projects:\n${workspaceProjects.map(p =>
-            `- ${p.name} (${p.shortCode}): keywords [${p.keywords.join(", ")}]${p.repos.length > 0 ? `, repos: ${p.repos.join(", ")}` : ""}`
-          ).join("\n")}`
+        ? `\n\n- projectsMapping: ${JSON.stringify(
+            workspaceProjects.map((p) => ({
+              id: p.id,
+              name: p.name,
+              shortCode: p.shortCode,
+              aliases: p.keywords,
+              repos: p.repos,
+            }))
+          )}`
         : "\n\nNo projects configured yet. Tasks will use generic FIX-xxx IDs.";
 
       let channelProjectInfo = "";
@@ -1775,6 +1808,10 @@ export const handleAssistantMessage = internalAction({
           ? " - STRICT MODE: You MUST use this project. Ignore any other project names mentioned in the text."
           : " - Use this project for tasks from this channel unless another is explicitly mentioned";
         channelProjectInfo = `\n- channelDefaultProject: ${channelDefaultProject.name} (${channelDefaultProject.shortCode})${strictInstruction}`;
+      } else if (workspaceDefaultProject) {
+        channelProjectInfo = `\n- channelDefaultProject: ${workspaceDefaultProject.name} (${workspaceDefaultProject.shortCode}) - Only project in this workspace; use it by default`;
+      } else {
+        channelProjectInfo = "\n- channelDefaultProject: none - Use keyword matching or ask which project";
       }
 
       const contextInfo = `Context (use these values when calling tools):
