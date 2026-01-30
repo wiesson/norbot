@@ -637,7 +637,7 @@ export const linkProjectToRepo = internalMutation({
 async function resolveRepositoryForTask(
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   ctx: { runQuery: (query: any, args: any) => Promise<any> },
-  task: { repositoryId?: string; projectId?: string; project?: { repositoryId?: string } }
+  task: { repositoryId?: string; projectId?: string; project?: { repositoryId?: string } | null }
 ): Promise<{ repositoryId: string; name: string; fullName: string } | null> {
   if (task.repositoryId) {
     const repo = await ctx.runQuery(internal.github.getRepository, {
