@@ -41,7 +41,8 @@ import {
 } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
 import Link from "next/link";
-import { ArrowLeft, Slack, Trash2, UserMinus, Lock, Globe, Plus, FolderGit2, UserPlus, Hash } from "lucide-react";
+import { ArrowLeft, Slack, Trash2, UserMinus, Lock, Globe, Plus, FolderGit2, UserPlus, Hash, Key } from "lucide-react";
+import { ApiKeysSection } from "@/components/settings/api-keys-section";
 import type { Id } from "@convex/_generated/dataModel";
 import { RepoSelector, type Repo } from "@/components/repo-selector";
 
@@ -815,6 +816,9 @@ export default function WorkspaceSettingsPage({ params }: WorkspaceSettingsPageP
             </Dialog>
           </CardContent>
         </Card>
+
+        {/* API Keys Section */}
+        <ApiKeysSection workspaceId={workspace._id} />
 
         {/* Danger Zone */}
         {isAdmin && (

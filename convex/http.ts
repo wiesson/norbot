@@ -364,4 +364,94 @@ http.route({
   }),
 });
 
+// ===========================================
+// MCP API (external LLM integrations)
+// ===========================================
+
+http.route({
+  path: "/api/mcp/tasks",
+  method: "POST",
+  handler: httpAction(async (ctx, request) => {
+    // Validate API key
+    const apiKey = request.headers.get("x-api-key");
+    if (!apiKey) {
+      return new Response(JSON.stringify({ error: "Missing x-api-key header" }), {
+        status: 401,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
+
+    const auth = await ctx.runQuery(internal.mcp.validateApiKey, { key: apiKey });
+    if (!auth) {
+      return new Response(JSON.stringify({ error: "Invalid API key" }), {
+        status: 401,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
+
+    const body = await request.json();
+    const { action, ...args } = body;
+
+    try {
+      let result;
+
+      switch (action) {
+        case "list":
+          result = await ctx.runQuery(internal.mcp.listTasks, {
+            projectId: auth.projectId,
+            status: args.status,
+            limit: args.limit,
+          });
+          break;
+
+        case "create":
+          result = await ctx.runMutation(internal.mcp.createTask, {
+            workspaceId: auth.workspaceId,
+            projectId: auth.projectId,
+            title: args.title,
+            description: args.description,
+            priority: args.priority,
+            taskType: args.type,
+          });
+          break;
+
+        case "update":
+          result = await ctx.runMutation(internal.mcp.updateTask, {
+            projectId: auth.projectId,
+            displayId: args.id,
+            title: args.title,
+            description: args.description,
+            priority: args.priority,
+          });
+          break;
+
+        case "status":
+          result = await ctx.runMutation(internal.mcp.updateStatus, {
+            projectId: auth.projectId,
+            displayId: args.id,
+            status: args.status,
+            note: args.note,
+          });
+          break;
+
+        default:
+          return new Response(
+            JSON.stringify({ error: `Unknown action: ${action}. Use: list, create, update, status` }),
+            { status: 400, headers: { "Content-Type": "application/json" } }
+          );
+      }
+
+      return new Response(JSON.stringify(result), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      });
+    } catch (error) {
+      return new Response(
+        JSON.stringify({ error: error instanceof Error ? error.message : "Unknown error" }),
+        { status: 500, headers: { "Content-Type": "application/json" } }
+      );
+    }
+  }),
+});
+
 export default http;

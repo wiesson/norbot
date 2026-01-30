@@ -73,6 +73,46 @@ That's the vibe. You message Norbot about a bug, it might ask a few clarifying q
 └─────────────────────────────────────────────────────────────┘
 ```
 
+## MCP Integration (for Claude Code, Cursor, etc.)
+
+Norbot exposes an MCP server so LLMs can manage tasks directly.
+
+### Setup
+
+1. **Generate API key** in Norbot settings (one key per project)
+
+2. **Add to Claude Code** (`~/.claude/mcp.json`):
+```json
+{
+  "mcpServers": {
+    "norbot": {
+      "command": "npx",
+      "args": ["@norbot/mcp"],
+      "env": {
+        "NORBOT_API_KEY": "nrbt_your_key_here"
+      }
+    }
+  }
+}
+```
+
+### Tools
+
+| Tool | Description | Example |
+|------|-------------|---------|
+| `norbot_list` | List tasks | `norbot_list({ status: "todo" })` |
+| `norbot_create` | Create task | `norbot_create({ title: "Fix bug" })` |
+| `norbot_update` | Update task | `norbot_update({ id: "TM-42", priority: "high" })` |
+| `norbot_status` | Change status | `norbot_status({ id: "TM-42", status: "done" })` |
+
+### Token-friendly responses
+
+Responses are plain text, not JSON:
+```
+TM-42: Fix login bug [in_progress] high
+TM-43: Add dark mode [todo] medium
+```
+
 ## Tech Stack
 
 - **Frontend**: Next.js 16, React 19, shadcn/ui (base-ui)
@@ -172,7 +212,10 @@ Open [http://localhost:3000](http://localhost:3000)
 │   ├── projects.ts            # Projects management
 │   ├── channelMappings.ts     # Channel-repo-project links
 │   ├── github.ts              # GitHub integration
+│   ├── mcp.ts                 # MCP API operations
 │   └── http.ts                # Webhook endpoints
+├── packages/
+│   └── mcp-server/            # @norbot/mcp package
 └── slack-app-manifest.yaml    # Slack app setup
 ```
 
