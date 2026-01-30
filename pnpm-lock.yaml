@@ -19,7 +19,7 @@ importers:
         version: 1.1.0(@types/react@19.2.10)(react-dom@19.2.4)(react@19.2.4)
       '@convex-dev/agent':
         specifier: 0.3.2
-        version: 0.3.2(@ai-sdk/provider-utils@4.0.11)(ai@6.0.62)(convex-helpers@0.1.111)(convex@1.31.7)(react@19.2.4)
+        version: 0.3.2(@ai-sdk/provider-utils@3.0.20)(ai@6.0.62)(convex-helpers@0.1.111)(convex@1.31.7)(react@19.2.4)
       '@dnd-kit/core':
         specifier: ^6.3.1
         version: 6.3.1(react-dom@19.2.4)(react@19.2.4)
@@ -149,6 +149,18 @@ packages:
       zod: 4.3.6
     dev: false
 
+  /@ai-sdk/provider-utils@3.0.20(zod@4.3.6):
+    resolution: {integrity: sha512-iXHVe0apM2zUEzauqJwqmpC37A5rihrStAih5Ks+JE32iTe4LZ58y17UGBjpQQTCRw9YxMeo2UFLxLpBluyvLQ==}
+    engines: {node: '>=18'}
+    peerDependencies:
+      zod: ^3.25.76 || ^4.1.8
+    dependencies:
+      '@ai-sdk/provider': 2.0.1
+      '@standard-schema/spec': 1.1.0
+      eventsource-parser: 3.0.6
+      zod: 4.3.6
+    dev: false
+
   /@ai-sdk/provider-utils@4.0.11(zod@4.3.6):
     resolution: {integrity: sha512-y/WOPpcZaBjvNaogy83mBsCRPvbtaK0y1sY9ckRrrbTGMvG2HC/9Y/huqNXKnLAxUIME2PGa2uvF2CDwIsxoXQ==}
     engines: {node: '>=18'}
@@ -159,6 +171,13 @@ packages:
       '@standard-schema/spec': 1.1.0
       eventsource-parser: 3.0.6
       zod: 4.3.6
+    dev: false
+
+  /@ai-sdk/provider@2.0.1:
+    resolution: {integrity: sha512-KCUwswvsC5VsW2PWFqF8eJgSCu5Ysj7m1TxiHTVA6g7k360bk0RNQENT8KTMAYEs+8fWPD3Uu4dEmzGHc+jGng==}
+    engines: {node: '>=18'}
+    dependencies:
+      json-schema: 0.4.0
     dev: false
 
   /@ai-sdk/provider@3.0.6:
@@ -517,7 +536,7 @@ packages:
       use-sync-external-store: 1.6.0(react@19.2.4)
     dev: false
 
-  /@convex-dev/agent@0.3.2(@ai-sdk/provider-utils@4.0.11)(ai@6.0.62)(convex-helpers@0.1.111)(convex@1.31.7)(react@19.2.4):
+  /@convex-dev/agent@0.3.2(@ai-sdk/provider-utils@3.0.20)(ai@6.0.62)(convex-helpers@0.1.111)(convex@1.31.7)(react@19.2.4):
     resolution: {integrity: sha512-TMFReXejAIUE22OOn8PYvoOseAqwVOPm4WZU554GFk0lJ9kcNCGRJP/T1NTZfSBXrSaSUjETMFv2vEfXbG+4Qg==}
     peerDependencies:
       '@ai-sdk/provider-utils': ^3.0.7
@@ -529,7 +548,7 @@ packages:
       react:
         optional: true
     dependencies:
-      '@ai-sdk/provider-utils': 4.0.11(zod@4.3.6)
+      '@ai-sdk/provider-utils': 3.0.20(zod@4.3.6)
       ai: 6.0.62(zod@4.3.6)
       convex: 1.31.7(react@19.2.4)
       convex-helpers: 0.1.111(convex@1.31.7)(hono@4.11.7)(react@19.2.4)(typescript@5.9.3)(zod@4.3.6)
