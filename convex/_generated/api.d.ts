@@ -11,10 +11,12 @@
 import type * as agents_taskExtractor from "../agents/taskExtractor.js";
 import type * as agents_tools from "../agents/tools.js";
 import type * as ai from "../ai.js";
+import type * as apiKeys from "../apiKeys.js";
 import type * as channelMappings from "../channelMappings.js";
 import type * as github from "../github.js";
 import type * as http from "../http.js";
 import type * as invitations from "../invitations.js";
+import type * as mcp from "../mcp.js";
 import type * as projects from "../projects.js";
 import type * as repositories from "../repositories.js";
 import type * as slack from "../slack.js";
@@ -34,10 +36,12 @@ declare const fullApi: ApiFromModules<{
   "agents/taskExtractor": typeof agents_taskExtractor;
   "agents/tools": typeof agents_tools;
   ai: typeof ai;
+  apiKeys: typeof apiKeys;
   channelMappings: typeof channelMappings;
   github: typeof github;
   http: typeof http;
   invitations: typeof invitations;
+  mcp: typeof mcp;
   projects: typeof projects;
   repositories: typeof repositories;
   slack: typeof slack;
