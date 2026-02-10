@@ -594,6 +594,20 @@ ${cleanText}
 
 Original text for task creation: ${originalText}`;
 
+      // Save conversation BEFORE agent call so follow-ups work even if the agent fails
+      await ctx.runMutation(internal.slack.upsertAgentConversation, {
+        workspaceId: workspace._id,
+        slackChannelId: args.channelId,
+        slackThreadTs: args.threadTs,
+        agentThreadId: threadId,
+        status: "active",
+        originalText,
+        originalMessageTs,
+        originalAttachments: storedAttachments,
+        lastUserText: cleanText,
+        lastUserMessageTs: args.ts,
+      });
+
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const result = await norbotAgent.generateText(ctx, { threadId }, {
         messages: [{ role: "user" as const, content: contextInfo }],
@@ -606,7 +620,6 @@ Original text for task creation: ${originalText}`;
       });
 
       // Send the agent's response directly
-      // The agent handles everything: greetings, summaries, status updates, assignments, task creation
       const responseText = result.text || getFallbackMessage();
 
       await sendSlackMessage({
@@ -614,20 +627,6 @@ Original text for task creation: ${originalText}`;
         channelId: args.channelId,
         threadTs: args.threadTs,
         text: responseText,
-      });
-
-      // Save conversation for thread continuity (so we can respond to follow-ups)
-      await ctx.runMutation(internal.slack.upsertAgentConversation, {
-        workspaceId: workspace._id,
-        slackChannelId: args.channelId,
-        slackThreadTs: args.threadTs,
-        agentThreadId: threadId,
-        status: "active",
-        originalText,
-        originalMessageTs,
-        originalAttachments: storedAttachments,
-        lastUserText: cleanText,
-        lastUserMessageTs: args.ts,
       });
     } catch (error) {
       console.error("Agent error:", error);
@@ -1017,9 +1016,7 @@ function formatThreadForContext(
   currentTs: string
 ): string {
   // Filter out the current message, keep bot messages for conversation context
-  const relevantMessages = messages
-    .filter((m) => m.ts !== currentTs)
-    .slice(-15);
+  const relevantMessages = messages.filter((m) => m.ts !== currentTs);
 
   if (relevantMessages.length === 0) {
     return "";
@@ -1032,11 +1029,7 @@ function formatThreadForContext(
       : `<@${m.user}>: ${m.text}`)
     .join("\n");
 
-  // Cap at ~2000 chars to avoid token bloat
-  const truncated =
-    formatted.length > 2000 ? formatted.slice(-2000) + "\n[...truncated]" : formatted;
-
-  return `\n## Thread context (previous messages in this thread — use this to understand what the user is referring to)\n${truncated}`;
+  return `\n## Thread context (previous messages in this thread — use this to understand what the user is referring to)\n${formatted}`;
 }
 
 // ===========================================
