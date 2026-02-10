@@ -653,6 +653,18 @@ export const handleThreadReply = internalAction({
     threadTs: v.string(),
   },
   handler: async (ctx, args) => {
+    // Deduplication: Check if we already processed this event
+    const alreadyProcessed = await ctx.runQuery(internal.slack.isEventProcessed, {
+      eventTs: args.ts,
+    });
+    if (alreadyProcessed) return;
+
+    const marked = await ctx.runMutation(internal.slack.markEventProcessed, {
+      eventTs: args.ts,
+      eventType: "thread_reply",
+    });
+    if (!marked) return;
+
     // Get workspace
     const workspace = await ctx.runQuery(internal.slack.getWorkspaceBySlackTeam, {
       slackTeamId: args.teamId,
@@ -667,8 +679,8 @@ export const handleThreadReply = internalAction({
       slackThreadTs: args.threadTs,
     });
 
-    if (conversation && conversation.status === "active") {
-      // Continue the agent conversation
+    if (conversation) {
+      // Continue the agent conversation (reuse thread if active, create new if not)
       try {
         // Check AI usage limits
         const usageCheck = await ctx.runQuery(internal.ai.checkUsageInternal, {
@@ -781,11 +793,15 @@ ${args.text}
 
 Original text for task creation: ${originalText}`;
 
-        // Continue on the existing agent thread
+        // Reuse agent thread if active, otherwise create new one
+        const threadId = conversation.status === "active"
+          ? conversation.agentThreadId
+          : (await norbotAgent.createThread(ctx, {})).threadId;
+
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const result = await norbotAgent.generateText(
           ctx,
-          { threadId: conversation.agentThreadId },
+          { threadId },
           {
             messages: [{ role: "user" as const, content: contextInfo }],
             maxSteps: 5,
@@ -812,7 +828,7 @@ Original text for task creation: ${originalText}`;
           workspaceId: workspace._id,
           slackChannelId: args.channelId,
           slackThreadTs: args.threadTs,
-          agentThreadId: conversation.agentThreadId,
+          agentThreadId: threadId,
           status: "active",
           originalText,
           originalMessageTs,
@@ -1694,6 +1710,18 @@ export const handleAssistantMessage = internalAction({
     threadTs: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
+    // Deduplication: Check if we already processed this event
+    const alreadyProcessed = await ctx.runQuery(internal.slack.isEventProcessed, {
+      eventTs: args.ts,
+    });
+    if (alreadyProcessed) return;
+
+    const marked = await ctx.runMutation(internal.slack.markEventProcessed, {
+      eventTs: args.ts,
+      eventType: "assistant_message",
+    });
+    if (!marked) return;
+
     const workspace = await ctx.runQuery(internal.slack.getWorkspaceBySlackTeam, {
       slackTeamId: args.teamId,
     });
