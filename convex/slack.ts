@@ -606,9 +606,7 @@ Original text for task creation: ${originalText}`;
 
       // Send the agent's response directly
       // The agent handles everything: greetings, summaries, status updates, assignments, task creation
-      const responseText =
-        result.text ||
-        "I didn't quite understand that. Could you provide more details?\n• What were you trying to do?\n• What happened instead?\n• Any error messages?";
+      const responseText = result.text || getFallbackMessage(cleanText);
 
       await sendSlackMessage({
         token: workspace.slackBotToken ?? "",
@@ -798,7 +796,7 @@ Original text for task creation: ${originalText}`;
         });
 
         const responseText =
-          result.text || "I'm not sure how to help with that. Could you clarify?";
+          result.text || getFallbackMessage(args.text);
 
         await sendSlackMessage({
           token: workspace.slackBotToken ?? "",
@@ -951,6 +949,24 @@ async function sendSlackMessage(params: {
     console.error("Slack API error:", data.error);
   }
   return data;
+}
+
+// Detect if text is likely German based on common German words
+function looksGerman(text: string): boolean {
+  const lower = text.toLowerCase();
+  const germanIndicators = [
+    /\b(und|oder|nicht|auch|aber|mit|für|ein|eine|einen|einem|einer|des|dem|den|das|die|der|ist|sind|hat|haben|wird|werden|kann|können|auf|aus|bei|nach|von|vor|zu|zum|zur|über|unter|ich|du|er|sie|wir|ihr|diese|dieser|diesen|diesem|noch|schon|nur|sehr|hier|bitte|danke|guten|morgen|hallo)\b/,
+    /[äöüß]/,
+  ];
+  return germanIndicators.some((re) => re.test(lower));
+}
+
+// Get fallback message in the appropriate language
+function getFallbackMessage(userText: string): string {
+  if (looksGerman(userText)) {
+    return "Das habe ich leider nicht ganz verstanden. Kannst du etwas genauer beschreiben, was ich tun soll?";
+  }
+  return "I didn't quite understand that. Could you describe what you'd like me to do in a bit more detail?";
 }
 
 // Fetch all replies in a thread from Slack
@@ -1833,7 +1849,7 @@ Original text for task creation: ${originalText}`;
       });
 
       const responseText =
-        result.text || "I'm not sure how to help with that. Could you clarify?";
+        result.text || getFallbackMessage(args.text);
 
       await sendSlackMessage({
         token: workspace.slackBotToken ?? "",
