@@ -469,6 +469,31 @@ export const handleAppMention = internalAction({
       return;
     }
 
+    // Handle stop command — stop following this thread
+    if (/^(stop|stopp|halt)$/i.test(cleanText)) {
+      const existingConvo = await ctx.runQuery(internal.slack.getAgentConversation, {
+        workspaceId: workspace._id,
+        slackChannelId: args.channelId,
+        slackThreadTs: args.threadTs,
+      });
+      if (existingConvo) {
+        await ctx.runMutation(internal.slack.upsertAgentConversation, {
+          workspaceId: workspace._id,
+          slackChannelId: args.channelId,
+          slackThreadTs: args.threadTs,
+          agentThreadId: existingConvo.agentThreadId,
+          status: "stopped",
+        });
+      }
+      await sendSlackMessage({
+        token: workspace.slackBotToken ?? "",
+        channelId: args.channelId,
+        threadTs: args.threadTs,
+        text: "Ok, I'll stop following this thread. Mention me again to resume.",
+      });
+      return;
+    }
+
     // Download any attached files from Slack
     let attachments: Array<{
       storageId: string;
@@ -678,7 +703,7 @@ export const handleThreadReply = internalAction({
       slackThreadTs: args.threadTs,
     });
 
-    if (conversation) {
+    if (conversation && conversation.status !== "stopped") {
       // Continue the agent conversation (reuse thread if active, create new if not)
       try {
         // Check AI usage limits
@@ -1471,7 +1496,7 @@ export const upsertAgentConversation = internalMutation({
     slackChannelId: v.string(),
     slackThreadTs: v.string(),
     agentThreadId: v.string(),
-    status: v.union(v.literal("active"), v.literal("completed")),
+    status: v.union(v.literal("active"), v.literal("completed"), v.literal("stopped")),
     originalText: v.optional(v.string()),
     originalMessageTs: v.optional(v.string()),
     originalAttachments: v.optional(
