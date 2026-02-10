@@ -585,11 +585,12 @@ export const handleAppMention = internalAction({
       };
 
       // Build context for the agent with all required parameters for tools
-      const contextInfo = `Context (use these values when calling tools):
+      const contextInfo = `## Tool parameters
 - source: ${JSON.stringify(sourceContext)}
-- channelName: ${channelMapping?.slackChannelName || "unknown"}${channelProjectInfo}${repoInfo}${attachmentsInfo}${projectsInfo}${threadContext}
-
-User message: ${cleanText}
+- channelName: ${channelMapping?.slackChannelName || "unknown"}${channelProjectInfo}${repoInfo}${attachmentsInfo}${projectsInfo}
+${threadContext}
+## User message
+${cleanText}
 
 Original text for task creation: ${originalText}`;
 
@@ -771,11 +772,12 @@ export const handleThreadReply = internalAction({
         }
 
         // Build context for follow-up with full context
-        const contextInfo = `Context (use these values when calling tools):
+        const contextInfo = `## Tool parameters
 - source: ${JSON.stringify(sourceContext)}
-- channelName: ${channelMapping?.slackChannelName || "unknown"}${channelProjectInfo}${repoInfo}${attachmentsInfo}${projectsInfo}${threadContext}
-
-User follow-up message: ${args.text}
+- channelName: ${channelMapping?.slackChannelName || "unknown"}${channelProjectInfo}${repoInfo}${attachmentsInfo}${projectsInfo}
+${threadContext}
+## User follow-up message
+${args.text}
 
 Original text for task creation: ${originalText}`;
 
@@ -1018,7 +1020,7 @@ function formatThreadForContext(
   const truncated =
     formatted.length > 2000 ? formatted.slice(-2000) + "\n[...truncated]" : formatted;
 
-  return `\n\nThread context (previous messages in this thread):\n${truncated}`;
+  return `\n## Thread context (previous messages in this thread — use this to understand what the user is referring to)\n${truncated}`;
 }
 
 // ===========================================
@@ -1817,11 +1819,12 @@ export const handleAssistantMessage = internalAction({
         channelProjectInfo = "\n- channelDefaultProject: none - Use keyword matching or ask which project";
       }
 
-      const contextInfo = `Context (use these values when calling tools):
+      const contextInfo = `## Tool parameters
 - source: ${JSON.stringify(sourceContext)}
-- channelName: ${channelMapping?.slackChannelName || "unknown"}${channelProjectInfo}${repoInfo}${projectsInfo}${threadContext}
-
-User message: ${args.text}
+- channelName: ${channelMapping?.slackChannelName || "unknown"}${channelProjectInfo}${repoInfo}${projectsInfo}
+${threadContext}
+## User message
+${args.text}
 
 Original text for task creation: ${originalText}`;
 
