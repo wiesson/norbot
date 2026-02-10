@@ -606,7 +606,7 @@ Original text for task creation: ${originalText}`;
 
       // Send the agent's response directly
       // The agent handles everything: greetings, summaries, status updates, assignments, task creation
-      const responseText = result.text || getFallbackMessage(cleanText);
+      const responseText = result.text || getFallbackMessage();
 
       await sendSlackMessage({
         token: workspace.slackBotToken ?? "",
@@ -796,7 +796,7 @@ Original text for task creation: ${originalText}`;
         });
 
         const responseText =
-          result.text || getFallbackMessage(args.text);
+          result.text || getFallbackMessage();
 
         await sendSlackMessage({
           token: workspace.slackBotToken ?? "",
@@ -951,21 +951,8 @@ async function sendSlackMessage(params: {
   return data;
 }
 
-// Detect if text is likely German based on common German words
-function looksGerman(text: string): boolean {
-  const lower = text.toLowerCase();
-  const germanIndicators = [
-    /\b(und|oder|nicht|auch|aber|mit|für|ein|eine|einen|einem|einer|des|dem|den|das|die|der|ist|sind|hat|haben|wird|werden|kann|können|auf|aus|bei|nach|von|vor|zu|zum|zur|über|unter|ich|du|er|sie|wir|ihr|diese|dieser|diesen|diesem|noch|schon|nur|sehr|hier|bitte|danke|guten|morgen|hallo)\b/,
-    /[äöüß]/,
-  ];
-  return germanIndicators.some((re) => re.test(lower));
-}
-
-// Get fallback message in the appropriate language
-function getFallbackMessage(userText: string): string {
-  if (looksGerman(userText)) {
-    return "Das habe ich leider nicht ganz verstanden. Kannst du etwas genauer beschreiben, was ich tun soll?";
-  }
+// Fallback when agent returns empty response
+function getFallbackMessage(): string {
   return "I didn't quite understand that. Could you describe what you'd like me to do in a bit more detail?";
 }
 
@@ -1849,7 +1836,7 @@ Original text for task creation: ${originalText}`;
       });
 
       const responseText =
-        result.text || getFallbackMessage(args.text);
+        result.text || getFallbackMessage();
 
       await sendSlackMessage({
         token: workspace.slackBotToken ?? "",
