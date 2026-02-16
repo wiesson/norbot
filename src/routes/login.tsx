@@ -1,6 +1,7 @@
 "use client";
 
 import { FormEvent, useEffect, useState } from "react";
+import { createFileRoute } from "@tanstack/react-router";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -9,8 +10,9 @@ import { useQuery } from "convex/react";
 import { api } from "@convex/_generated/api";
 import { authClient } from "@/lib/auth-client";
 import { useNavigate } from "@tanstack/react-router";
+import { redirectAuthenticatedToHome } from "@/lib/route-auth";
 
-export function LoginRouteView() {
+function LoginRouteView() {
   const navigate = useNavigate();
   const { data: session } = authClient.useSession();
   const providers = useQuery(api.auth.providersStatus, {});
@@ -148,3 +150,10 @@ export function LoginRouteView() {
     </div>
   );
 }
+
+export const Route = createFileRoute("/login")({
+  beforeLoad: async () => {
+    await redirectAuthenticatedToHome();
+  },
+  component: LoginRouteView,
+});
