@@ -1,4 +1,4 @@
-import { redirect } from "next/navigation";
+import { redirect } from "@/compat/next-navigation";
 import { ConvexHttpClient } from "convex/browser";
 import { api } from "@convex/_generated/api";
 import { getSessionToken } from "@/lib/auth";

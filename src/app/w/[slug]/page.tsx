@@ -4,14 +4,14 @@ import { use, useEffect } from "react";
 import { useQuery } from "convex/react";
 import { api } from "@convex/_generated/api";
 import { useAuth } from "@/hooks/use-auth";
-import { useRouter } from "next/navigation";
+import { useRouter } from "@/compat/next-navigation";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { buttonVariants } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import { Settings, LogOut, ChevronLeft, Slack, ArrowRight, FolderKanban } from "lucide-react";
-import Link from "next/link";
+import Link from "@/compat/next-link";
 
 interface WorkspacePageProps {
   params: Promise<{ slug: string }>;

@@ -4,7 +4,7 @@ import { use, useEffect } from "react";
 import { useQuery } from "convex/react";
 import { api } from "@convex/_generated/api";
 import { useAuth } from "@/hooks/use-auth";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "@/compat/next-navigation";
 import { KanbanBoard } from "@/components/kanban/kanban-board";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { buttonVariants } from "@/components/ui/button";
@@ -19,7 +19,7 @@ import {
 import { Card, CardContent } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import { Settings, LogOut, ChevronLeft, GitBranch, Slack } from "lucide-react";
-import Link from "next/link";
+import Link from "@/compat/next-link";
 import type { Id } from "@convex/_generated/dataModel";
 
 interface ProjectPageProps {

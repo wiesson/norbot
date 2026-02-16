@@ -4,7 +4,7 @@ import { use, useEffect, useState } from "react";
 import { useQuery, useMutation, useAction } from "convex/react";
 import { api } from "@convex/_generated/api";
 import { useAuth } from "@/hooks/use-auth";
-import { useRouter } from "next/navigation";
+import { useRouter } from "@/compat/next-navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button, buttonVariants } from "@/components/ui/button";
@@ -40,7 +40,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
-import Link from "next/link";
+import Link from "@/compat/next-link";
 import { ArrowLeft, Slack, Trash2, UserMinus, Lock, Globe, Plus, FolderGit2, UserPlus, Hash, Key } from "lucide-react";
 import { ApiKeysSection } from "@/components/settings/api-keys-section";
 import type { Id } from "@convex/_generated/dataModel";

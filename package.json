@@ -59,6 +59,7 @@
     "@types/react-dom": "^19.2.3",
     "@typescript/native-preview": "7.0.0-dev.20260216.1",
     "@vitejs/plugin-react": "^5.1.4",
+    "nitro": "3.0.1-alpha.2",
     "oxfmt": "^0.33.0",
     "oxlint": "^1.48.0",
     "tailwindcss": "^4.1.18",

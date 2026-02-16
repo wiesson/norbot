@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { LogOut, Settings } from "lucide-react";
-import Link from "next/link";
+import Link from "@/compat/next-link";
 import { LogoutButton } from "@/components/logout-button";
 
 interface Workspace {

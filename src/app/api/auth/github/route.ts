@@ -1,4 +1,4 @@
-import { redirect } from "next/navigation";
+import { redirect } from "@/compat/next-navigation";
 import { NextRequest } from "next/server";
 
 export async function POST(request: NextRequest) {

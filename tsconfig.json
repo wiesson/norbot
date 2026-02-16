@@ -15,9 +15,7 @@
     "incremental": true,
     "paths": {
       "@/*": ["./src/*"],
-      "@convex/*": ["./convex/*"],
-      "next/link": ["./src/compat/next-link.tsx"],
-      "next/navigation": ["./src/compat/next-navigation.ts"]
+      "@convex/*": ["./convex/*"]
     }
   },
   "include": ["**/*.ts", "**/*.tsx", "**/*.mts"],

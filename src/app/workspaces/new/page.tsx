@@ -1,11 +1,11 @@
-import { redirect } from "next/navigation";
+import { redirect } from "@/compat/next-navigation";
 import { ConvexHttpClient } from "convex/browser";
 import { api } from "@convex/_generated/api";
 import { getSessionToken } from "@/lib/auth";
 import { Card, CardContent } from "@/components/ui/card";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import Link from "next/link";
+import Link from "@/compat/next-link";
 
 const convex = new ConvexHttpClient(process.env.NEXT_PUBLIC_CONVEX_URL!);
 
