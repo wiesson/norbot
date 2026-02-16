@@ -295,6 +295,136 @@ export const create = mutation({
   },
 });
 
+export const update = mutation({
+  args: {
+    id: v.id("tasks"),
+    title: v.string(),
+    description: v.optional(v.string()),
+    priority: v.union(
+      v.literal("critical"),
+      v.literal("high"),
+      v.literal("medium"),
+      v.literal("low")
+    ),
+    taskType: v.union(
+      v.literal("bug"),
+      v.literal("feature"),
+      v.literal("improvement"),
+      v.literal("task"),
+      v.literal("question")
+    ),
+    status: v.union(
+      v.literal("backlog"),
+      v.literal("todo"),
+      v.literal("in_progress"),
+      v.literal("in_review"),
+      v.literal("done"),
+      v.literal("cancelled")
+    ),
+    repositoryId: v.optional(v.id("repositories")),
+    projectId: v.optional(v.id("projects")),
+    dueDate: v.optional(v.number()),
+    labels: v.array(v.string()),
+    assigneeId: v.optional(v.id("users")),
+    attachments: v.optional(
+      v.array(
+        v.object({
+          storageId: v.id("_storage"),
+          filename: v.string(),
+          mimeType: v.string(),
+          size: v.number(),
+          slackFileId: v.optional(v.string()),
+        })
+      )
+    ),
+    codeContext: v.optional(
+      v.object({
+        url: v.optional(v.string()),
+        filePaths: v.optional(v.array(v.string())),
+        errorMessage: v.optional(v.string()),
+        stackTrace: v.optional(v.string()),
+        codeSnippet: v.optional(v.string()),
+        suggestedFix: v.optional(v.string()),
+        branch: v.optional(v.string()),
+        commitSha: v.optional(v.string()),
+      })
+    ),
+    userId: v.optional(v.id("users")),
+  },
+  handler: async (ctx, args) => {
+    const task = await ctx.db.get(args.id);
+    if (!task) throw new Error("Task not found");
+
+    const now = Date.now();
+    const statusChanged = task.status !== args.status;
+    const completedAt =
+      args.status === "done"
+        ? task.completedAt ?? now
+        : task.status === "done"
+          ? undefined
+          : task.completedAt;
+
+    await ctx.db.patch(args.id, {
+      repositoryId: args.repositoryId,
+      projectId: args.projectId,
+      title: args.title,
+      description: args.description,
+      priority: args.priority,
+      taskType: args.taskType,
+      status: args.status,
+      dueDate: args.dueDate,
+      labels: args.labels,
+      assigneeId: args.assigneeId,
+      attachments: args.attachments,
+      codeContext: args.codeContext,
+      completedAt,
+      updatedAt: now,
+    });
+
+    if (!statusChanged) return;
+
+    await ctx.db.insert("taskActivity", {
+      taskId: args.id,
+      userId: args.userId,
+      activityType: "status_changed",
+      changes: {
+        field: "status",
+        oldValue: task.status,
+        newValue: args.status,
+      },
+      createdAt: now,
+    });
+
+    // Sync status to GitHub if enabled and task has linked issue
+    if (task.projectId && task.githubIntegration?.issueNumber && args.userId) {
+      const project = await ctx.db.get(task.projectId);
+      if (project?.githubSync?.enabled && project.githubSync.syncStatus) {
+        const shouldClose =
+          (args.status === "done" || args.status === "cancelled") &&
+          task.status !== "done" &&
+          task.status !== "cancelled";
+
+        const shouldReopen =
+          args.status !== "done" &&
+          args.status !== "cancelled" &&
+          (task.status === "done" || task.status === "cancelled");
+
+        if (shouldClose) {
+          await ctx.scheduler.runAfter(0, internal.github.closeIssue, {
+            taskId: args.id,
+            userId: args.userId,
+          });
+        } else if (shouldReopen) {
+          await ctx.scheduler.runAfter(0, internal.github.reopenIssue, {
+            taskId: args.id,
+            userId: args.userId,
+          });
+        }
+      }
+    }
+  },
+});
+
 export const updateStatus = mutation({
   args: {
     id: v.id("tasks"),

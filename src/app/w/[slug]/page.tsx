@@ -1,26 +1,17 @@
 "use client";
 
-import { use, useCallback } from "react";
+import { use, useEffect } from "react";
 import { useQuery } from "convex/react";
 import { api } from "@convex/_generated/api";
 import { useAuth } from "@/hooks/use-auth";
-import { useRouter, useSearchParams } from "next/navigation";
-import { useEffect } from "react";
-import { KanbanBoard } from "@/components/kanban/kanban-board";
+import { useRouter } from "next/navigation";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Button, buttonVariants } from "@/components/ui/button";
+import { buttonVariants } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import {
-  Select,
-  SelectTrigger,
-  SelectValue,
-  SelectContent,
-  SelectItem,
-} from "@/components/ui/select";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
-import { Settings, LogOut, ChevronLeft, GitBranch, Slack } from "lucide-react";
+import { Settings, LogOut, ChevronLeft, Slack, ArrowRight, FolderKanban } from "lucide-react";
 import Link from "next/link";
-import type { Id } from "@convex/_generated/dataModel";
 
 interface WorkspacePageProps {
   params: Promise<{ slug: string }>;
@@ -30,38 +21,12 @@ export default function WorkspacePage({ params }: WorkspacePageProps) {
   const { slug } = use(params);
   const { user, isLoading: authLoading, isAuthenticated } = useAuth();
   const router = useRouter();
-  const searchParams = useSearchParams();
-
-  // URL-based filters
-  const projectFilter = searchParams.get("project");
-  const repoFilter = searchParams.get("repo");
-
-  const updateFilter = useCallback(
-    (key: string, value: string | null) => {
-      const params = new URLSearchParams(searchParams.toString());
-      if (value) {
-        params.set(key, value);
-      } else {
-        params.delete(key);
-      }
-      const query = params.toString();
-      router.push(query ? `?${query}` : "?", { scroll: false });
-    },
-    [searchParams, router]
-  );
 
   const workspace = useQuery(api.workspaces.getBySlug, { slug });
-  const repositories = useQuery(
-    api.repositories.list,
-    workspace ? { workspaceId: workspace._id } : "skip"
-  );
   const projects = useQuery(
     api.projects.list,
     workspace ? { workspaceId: workspace._id } : "skip"
   );
-
-  // Find project ID from shortCode filter
-  const selectedProject = projects?.find((p) => p.shortCode === projectFilter);
 
   useEffect(() => {
     if (!authLoading && !isAuthenticated) {
@@ -83,16 +48,12 @@ export default function WorkspacePage({ params }: WorkspacePageProps) {
 
   return (
     <div className="min-h-screen bg-neutral-50 dark:bg-neutral-950">
-      {/* Header */}
       <header className="border-b bg-white dark:bg-neutral-900 sticky top-0 z-10">
         <div className="container mx-auto px-4 py-3 flex items-center justify-between">
           <div className="flex items-center gap-4">
             <Link
               href="/"
-              className={cn(
-                buttonVariants({ variant: "ghost", size: "icon" }),
-                "mr-2"
-              )}
+              className={cn(buttonVariants({ variant: "ghost", size: "icon" }), "mr-2")}
             >
               <ChevronLeft className="h-5 w-5" />
             </Link>
@@ -109,54 +70,6 @@ export default function WorkspacePage({ params }: WorkspacePageProps) {
           </div>
 
           <div className="flex items-center gap-4">
-            {/* Project Filter Pills */}
-            {projects && projects.length > 0 && (
-              <div className="flex gap-1">
-                <Button
-                  size="sm"
-                  variant={!projectFilter ? "default" : "outline"}
-                  onClick={() => updateFilter("project", null)}
-                >
-                  All
-                </Button>
-                {projects.map((project) => (
-                  <Button
-                    key={project._id}
-                    size="sm"
-                    variant={
-                      projectFilter === project.shortCode ? "default" : "outline"
-                    }
-                    onClick={() => updateFilter("project", project.shortCode)}
-                  >
-                    {project.shortCode}
-                  </Button>
-                ))}
-              </div>
-            )}
-
-            {/* Repository Filter */}
-            {repositories && repositories.length > 0 && (
-              <Select
-                value={repoFilter ?? "all"}
-                onValueChange={(value) => {
-                  updateFilter("repo", value === "all" ? null : value);
-                }}
-              >
-                <SelectTrigger className="w-[200px]">
-                  <GitBranch className="size-4 mr-2 text-muted-foreground" />
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All repositories</SelectItem>
-                  {repositories.map((repo) => (
-                    <SelectItem key={repo._id} value={repo._id}>
-                      {repo.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            )}
-
             <Link
               href={`/w/${slug}/settings`}
               className={cn(buttonVariants({ variant: "ghost", size: "icon" }))}
@@ -168,9 +81,7 @@ export default function WorkspacePage({ params }: WorkspacePageProps) {
                 <AvatarImage src={user.avatarUrl} alt={user.name} />
                 <AvatarFallback>{user.name[0]}</AvatarFallback>
               </Avatar>
-              <span className="text-sm font-medium hidden sm:inline">
-                {user.name}
-              </span>
+              <span className="text-sm font-medium hidden sm:inline">{user.name}</span>
             </div>
             <Link
               href="/api/auth/logout"
@@ -182,14 +93,62 @@ export default function WorkspacePage({ params }: WorkspacePageProps) {
         </div>
       </header>
 
-      {/* Main Content */}
       <main className="py-6">
-        <div className="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8">
-          <KanbanBoard
-            workspaceId={workspace._id}
-            repositoryId={repoFilter ? (repoFilter as Id<"repositories">) : undefined}
-            projectId={selectedProject?._id}
-          />
+        <div className="max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
+          <div>
+            <h2 className="text-2xl font-semibold">Projects</h2>
+            <p className="text-sm text-muted-foreground">
+              Open a project board, or view all workspace tasks.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+            <Link href={`/w/${slug}/p/all`}>
+              <Card className="hover:border-primary transition-colors h-full">
+                <CardHeader>
+                  <CardTitle className="flex items-center justify-between">
+                    <span>All Tasks</span>
+                    <ArrowRight className="h-4 w-4 text-muted-foreground" />
+                  </CardTitle>
+                  <CardDescription>Workspace-wide board</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <Badge variant="secondary">ALL</Badge>
+                </CardContent>
+              </Card>
+            </Link>
+
+            {projects?.map((project) => (
+              <Link key={project._id} href={`/w/${slug}/p/${project.shortCode}`}>
+                <Card className="hover:border-primary transition-colors h-full">
+                  <CardHeader>
+                    <CardTitle className="flex items-center justify-between">
+                      <span>{project.name}</span>
+                      <ArrowRight className="h-4 w-4 text-muted-foreground" />
+                    </CardTitle>
+                    <CardDescription>
+                      {project.repositories?.length ?? 0} linked repos
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="flex items-center justify-between">
+                    <Badge>{project.shortCode}</Badge>
+                    <FolderKanban className="h-4 w-4 text-muted-foreground" />
+                  </CardContent>
+                </Card>
+              </Link>
+            ))}
+          </div>
+
+          {projects && projects.length === 0 && (
+            <Card>
+              <CardContent className="py-10 text-center space-y-2">
+                <p className="font-medium">No projects yet</p>
+                <p className="text-sm text-muted-foreground">
+                  Create projects via Slack with <code>@norbot create project</code>, then open them here.
+                </p>
+              </CardContent>
+            </Card>
+          )}
         </div>
       </main>
     </div>

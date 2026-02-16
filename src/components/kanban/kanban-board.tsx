@@ -203,22 +203,24 @@ export function KanbanBoard({ workspaceId, repositoryId, projectId }: KanbanBoar
         onDragEnd={handleDragEnd}
         onDragCancel={handleDragCancel}
       >
-        <div className="flex gap-4 overflow-x-auto pb-4 scroll-px-4 sm:scroll-px-6 lg:scroll-px-8">
-          {columns.map((column) => (
-            <KanbanColumn
-              key={column.key}
-              title={column.title}
-              status={column.key}
-              color={column.color}
-              tasks={kanbanData.columns[column.key] || []}
-              onTaskClick={handleTaskClick}
-              onAddTask={
-                column.key !== "done"
-                  ? () => handleAddTask(column.key as "backlog" | "todo" | "in_progress" | "in_review")
-                  : undefined
-              }
-            />
-          ))}
+        <div className="-mx-4 sm:-mx-6 lg:-mx-8">
+          <div className="flex gap-4 overflow-x-auto px-4 pb-4 sm:px-6 lg:px-8 scroll-px-4 sm:scroll-px-6 lg:scroll-px-8">
+            {columns.map((column) => (
+              <KanbanColumn
+                key={column.key}
+                title={column.title}
+                status={column.key}
+                color={column.color}
+                tasks={kanbanData.columns[column.key] || []}
+                onTaskClick={handleTaskClick}
+                onAddTask={
+                  column.key !== "done"
+                    ? () => handleAddTask(column.key as "backlog" | "todo" | "in_progress" | "in_review")
+                    : undefined
+                }
+              />
+            ))}
+          </div>
         </div>
 
         {/* Drag Overlay - the ghost card that follows the cursor */}

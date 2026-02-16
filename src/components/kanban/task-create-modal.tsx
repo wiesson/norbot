@@ -40,6 +40,7 @@ import {
   ImageIcon,
 } from "lucide-react";
 import { TiptapEditor } from "@/components/tiptap-editor";
+import { TicketAiHelper } from "@/components/kanban/ticket-ai-helper";
 
 interface UploadedFile {
   storageId: Id<"_storage">;
@@ -342,10 +343,19 @@ export function TaskCreateModal({
             {/* Description */}
             <div className="space-y-2">
               <Label>Description</Label>
+              <TicketAiHelper
+                workspaceId={workspaceId}
+                text={description}
+                title={title}
+                taskType={taskType}
+                onApply={setDescription}
+                disabled={isSubmitting}
+              />
               <TiptapEditor
                 value={description}
                 onChange={setDescription}
                 placeholder="Describe the task..."
+                minHeight={220}
               />
             </div>
 
@@ -519,10 +529,9 @@ export function TaskCreateModal({
                           <SelectItem key={member.userId} value={member.userId}>
                             <span className="flex items-center gap-2">
                               {member.avatarUrl ? (
-                                <img
-                                  src={member.avatarUrl}
-                                  alt=""
-                                  className="size-4 rounded-full"
+                                <span
+                                  className="size-4 rounded-full bg-cover bg-center"
+                                  style={{ backgroundImage: `url(${member.avatarUrl})` }}
                                 />
                               ) : (
                                 <span className="size-4 rounded-full bg-muted" />

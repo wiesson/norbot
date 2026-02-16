@@ -1,5 +1,5 @@
 import { v } from "convex/values";
-import { internalAction } from "./_generated/server";
+import { action, internalAction, internalMutation, internalQuery } from "./_generated/server";
 import { internal } from "./_generated/api";
 import { taskExtractorAgent } from "./agents/taskExtractor";
 
@@ -23,6 +23,8 @@ interface TaskExtraction {
   codeContext?: CodeContext;
   usedAi: boolean;
 }
+
+type TicketAssistMode = "summarize" | "rewrite" | "structure";
 
 // ===========================================
 // AI TASK EXTRACTION
@@ -103,6 +105,94 @@ Required JSON format:
     } catch (error) {
       console.error("AI extraction error:", error);
       return { ...fallbackExtraction(args.text), usedAi: false };
+    }
+  },
+});
+
+export const assistTicketText = action({
+  args: {
+    text: v.string(),
+    mode: v.union(v.literal("summarize"), v.literal("rewrite"), v.literal("structure")),
+    workspaceId: v.optional(v.id("workspaces")),
+    title: v.optional(v.string()),
+    taskType: v.optional(
+      v.union(
+        v.literal("bug"),
+        v.literal("feature"),
+        v.literal("improvement"),
+        v.literal("task"),
+        v.literal("question")
+      )
+    ),
+  },
+  handler: async (ctx, args) => {
+    const inputText = args.text.trim();
+    if (!inputText) {
+      return { text: "", usedAi: false };
+    }
+
+    // Check usage limits if workspaceId provided
+    if (args.workspaceId) {
+      const usage = await ctx.runQuery(internal.ai.checkUsageInternal, {
+        workspaceId: args.workspaceId,
+      });
+
+      if (!usage.allowed) {
+        return {
+          text: fallbackTicketAssist(args.mode, inputText, args.title),
+          usedAi: false,
+        };
+      }
+    }
+
+    try {
+      const { threadId } = await taskExtractorAgent.createThread(ctx, {});
+      const modeInstruction = getAssistInstruction(args.mode);
+
+      const result = await taskExtractorAgent.generateText(ctx, { threadId }, {
+        messages: [
+          {
+            role: "user" as const,
+            content: `You improve software engineering tickets.
+
+Task type: ${args.taskType ?? "task"}
+Title: ${args.title ?? "Untitled"}
+
+Mode: ${args.mode}
+Instruction: ${modeInstruction}
+
+Requirements:
+- Keep the same language as input.
+- Output Markdown only.
+- No code fences.
+- Be concise and actionable.
+
+Input:
+${inputText}`,
+          },
+        ],
+      } as Parameters<typeof taskExtractorAgent.generateText>[2]);
+
+      const assisted = sanitizeModelOutput(result.text);
+      if (!assisted) {
+        throw new Error("Empty model response");
+      }
+
+      if (args.workspaceId) {
+        await ctx.runMutation(internal.ai.incrementUsageInternal, {
+          workspaceId: args.workspaceId,
+        });
+      }
+
+      return {
+        text: assisted,
+        usedAi: true,
+      };
+    } catch {
+      return {
+        text: fallbackTicketAssist(args.mode, inputText, args.title),
+        usedAi: false,
+      };
     }
   },
 });
@@ -188,6 +278,56 @@ function fallbackExtraction(text: string): TaskExtraction {
   };
 }
 
+function getAssistInstruction(mode: TicketAssistMode): string {
+  if (mode === "summarize") {
+    return "Summarize the ticket into a short problem statement and key context.";
+  }
+  if (mode === "rewrite") {
+    return "Rewrite for clarity and brevity while preserving meaning and details.";
+  }
+  return "Structure the ticket with clear sections: Summary, Context, Steps/Scope, and Acceptance Criteria.";
+}
+
+function sanitizeModelOutput(text: string): string {
+  return text
+    .trim()
+    .replace(/^```(?:markdown|md)?\s*/i, "")
+    .replace(/```$/i, "")
+    .trim();
+}
+
+function fallbackTicketAssist(mode: TicketAssistMode, text: string, title?: string): string {
+  if (mode === "rewrite") {
+    return text;
+  }
+
+  const sentences = text
+    .split(/(?<=[.!?])\s+/)
+    .map((part) => part.trim())
+    .filter(Boolean);
+
+  if (mode === "summarize") {
+    const summary = sentences.slice(0, 3);
+    if (summary.length === 0) return text;
+    return summary.map((line) => `- ${line}`).join("\n");
+  }
+
+  const summaryLine = sentences[0] ?? title ?? "Describe the task.";
+  return `## Summary
+${summaryLine}
+
+## Context
+${text}
+
+## Scope
+- [ ] Define intended behavior
+- [ ] Note constraints or edge cases
+
+## Acceptance Criteria
+- [ ] Outcome is testable
+- [ ] Impacted area is verified`;
+}
+
 // ===========================================
 // VALIDATORS
 // ===========================================
@@ -211,8 +351,6 @@ function validateTaskType(value: unknown): "bug" | "feature" | "improvement" | "
 // ===========================================
 // USAGE TRACKING (internal functions)
 // ===========================================
-
-import { internalQuery, internalMutation } from "./_generated/server";
 
 const DEFAULT_AI_LIMIT = 2000;
 const MONTH_MS = 30 * 24 * 60 * 60 * 1000;

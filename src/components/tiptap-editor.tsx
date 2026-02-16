@@ -1,6 +1,7 @@
 "use client";
 
 import { useEditor, EditorContent } from "@tiptap/react";
+import { BubbleMenu, FloatingMenu } from "@tiptap/react/menus";
 import StarterKit from "@tiptap/starter-kit";
 import Link from "@tiptap/extension-link";
 import TaskList from "@tiptap/extension-task-list";
@@ -17,6 +18,7 @@ import {
   ListOrdered,
   ListChecks,
   Code2,
+  Plus,
   Link as LinkIcon,
 } from "lucide-react";
 
@@ -26,6 +28,9 @@ interface TiptapEditorProps {
   editable?: boolean;
   placeholder?: string;
   className?: string;
+  minHeight?: number;
+  showFixedToolbar?: boolean;
+  enableFloatingMenus?: boolean;
 }
 
 export function TiptapEditor({
@@ -34,6 +39,9 @@ export function TiptapEditor({
   editable = true,
   placeholder = "Write something...",
   className,
+  minHeight = 120,
+  showFixedToolbar = false,
+  enableFloatingMenus = true,
 }: TiptapEditorProps) {
   const editor = useEditor({
     extensions: [
@@ -55,10 +63,11 @@ export function TiptapEditor({
     editorProps: {
       attributes: {
         class: cn(
-          "prose prose-sm dark:prose-invert max-w-none focus:outline-none min-h-[60px]",
-          editable && "px-3 py-2",
+          "tiptap prose prose-sm dark:prose-invert max-w-none focus:outline-none",
+          editable && "px-3 py-3",
           !editable && "px-0 py-0",
         ),
+        style: `min-height:${minHeight}px`,
       },
     },
     onUpdate: ({ editor }) => {
@@ -107,7 +116,7 @@ export function TiptapEditor({
         className,
       )}
     >
-      {editable && (
+      {editable && showFixedToolbar && (
         <div className="flex flex-wrap gap-0.5 border-b px-2 py-1.5">
           <ToolbarButton
             onClick={() => editor.chain().focus().toggleBold().run()}
@@ -164,6 +173,74 @@ export function TiptapEditor({
             <LinkIcon className="size-4" />
           </ToolbarButton>
         </div>
+      )}
+      {editable && enableFloatingMenus && (
+        <>
+          <BubbleMenu editor={editor}>
+            <div className="flex items-center gap-0.5 rounded-md border bg-background px-1 py-1 shadow-md">
+              <ToolbarButton
+                onClick={() => editor.chain().focus().toggleBold().run()}
+                active={editor.isActive("bold")}
+                title="Bold"
+              >
+                <Bold className="size-4" />
+              </ToolbarButton>
+              <ToolbarButton
+                onClick={() => editor.chain().focus().toggleItalic().run()}
+                active={editor.isActive("italic")}
+                title="Italic"
+              >
+                <Italic className="size-4" />
+              </ToolbarButton>
+              <ToolbarButton onClick={setLink} active={editor.isActive("link")} title="Link">
+                <LinkIcon className="size-4" />
+              </ToolbarButton>
+              <ToolbarButton
+                onClick={() => editor.chain().focus().toggleCodeBlock().run()}
+                active={editor.isActive("codeBlock")}
+                title="Code block"
+              >
+                <Code2 className="size-4" />
+              </ToolbarButton>
+            </div>
+          </BubbleMenu>
+          <FloatingMenu editor={editor}>
+            <div className="flex items-center gap-0.5 rounded-md border bg-background px-1 py-1 shadow-md">
+              <ToolbarButton
+                onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()}
+                active={editor.isActive("heading", { level: 2 })}
+                title="Heading"
+              >
+                <Heading2 className="size-4" />
+              </ToolbarButton>
+              <ToolbarButton
+                onClick={() => editor.chain().focus().toggleBulletList().run()}
+                active={editor.isActive("bulletList")}
+                title="Bullet list"
+              >
+                <List className="size-4" />
+              </ToolbarButton>
+              <ToolbarButton
+                onClick={() => editor.chain().focus().toggleOrderedList().run()}
+                active={editor.isActive("orderedList")}
+                title="Ordered list"
+              >
+                <ListOrdered className="size-4" />
+              </ToolbarButton>
+              <ToolbarButton
+                onClick={() => editor.chain().focus().toggleTaskList().run()}
+                active={editor.isActive("taskList")}
+                title="Task list"
+              >
+                <ListChecks className="size-4" />
+              </ToolbarButton>
+              <span className="text-muted-foreground inline-flex items-center gap-1 px-1 text-xs">
+                <Plus className="size-3" />
+                blocks
+              </span>
+            </div>
+          </FloatingMenu>
+        </>
       )}
       <EditorContent editor={editor} />
     </div>
