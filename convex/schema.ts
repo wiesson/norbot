@@ -321,7 +321,7 @@ export default defineSchema({
       })
     ),
 
-    // Attachments (files/images from Slack)
+    // Attachments (files/images from Slack or manual uploads)
     attachments: v.optional(
       v.array(
         v.object({
@@ -329,7 +329,7 @@ export default defineSchema({
           filename: v.string(),
           mimeType: v.string(),
           size: v.number(),
-          slackFileId: v.string(),
+          slackFileId: v.optional(v.string()),
         })
       )
     ),
@@ -549,7 +549,7 @@ export default defineSchema({
           filename: v.string(),
           mimeType: v.string(),
           size: v.number(),
-          slackFileId: v.string(),
+          slackFileId: v.optional(v.string()),
         })
       )
     ),

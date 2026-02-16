@@ -303,7 +303,7 @@ export const createTask = internalMutation({
           filename: v.string(),
           mimeType: v.string(),
           size: v.number(),
-          slackFileId: v.string(),
+          slackFileId: v.optional(v.string()),
         })
       )
     ),

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "@convex/_generated/api";
 import type { Id } from "@convex/_generated/dataModel";
@@ -34,7 +34,25 @@ import {
   ChevronDown,
   ChevronUp,
   Loader2,
+  Paperclip,
+  X,
+  FileIcon,
+  ImageIcon,
 } from "lucide-react";
+import { TiptapEditor } from "@/components/tiptap-editor";
+
+interface UploadedFile {
+  storageId: Id<"_storage">;
+  filename: string;
+  mimeType: string;
+  size: number;
+}
+
+interface UploadingFile {
+  file: File;
+  progress: "uploading" | "done" | "error";
+  result?: UploadedFile;
+}
 
 interface TaskCreateModalProps {
   open: boolean;
@@ -71,6 +89,12 @@ type TaskType = (typeof taskTypes)[number]["value"];
 type Priority = (typeof priorities)[number]["value"];
 type Status = (typeof statuses)[number]["value"];
 
+function formatFileSize(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
 export function TaskCreateModal({
   open,
   onOpenChange,
@@ -89,9 +113,14 @@ export function TaskCreateModal({
   const [repositoryId, setRepositoryId] = useState<Id<"repositories"> | undefined>(
     defaultRepositoryId
   );
+  const [assigneeId, setAssigneeId] = useState<Id<"users"> | undefined>();
   const [dueDate, setDueDate] = useState<string>("");
   const [labels, setLabels] = useState<string[]>([]);
   const [labelInput, setLabelInput] = useState("");
+
+  // File upload state
+  const [uploadingFiles, setUploadingFiles] = useState<UploadingFile[]>([]);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Code context state
   const [showCodeContext, setShowCodeContext] = useState(false);
@@ -113,9 +142,11 @@ export function TaskCreateModal({
   // Queries
   const projects = useQuery(api.projects.list, { workspaceId });
   const repositories = useQuery(api.repositories.list, { workspaceId });
+  const members = useQuery(api.workspaces.getMembers, { workspaceId });
 
-  // Mutation
+  // Mutations
   const createTask = useMutation(api.tasks.create);
+  const generateUploadUrl = useMutation(api.web.generateUploadUrl);
 
   const resetForm = () => {
     setTitle("");
@@ -125,9 +156,11 @@ export function TaskCreateModal({
     setStatus(initialStatus);
     setProjectId(defaultProjectId);
     setRepositoryId(defaultRepositoryId);
+    setAssigneeId(undefined);
     setDueDate("");
     setLabels([]);
     setLabelInput("");
+    setUploadingFiles([]);
     setShowCodeContext(false);
     setFilePaths([]);
     setFilePathInput("");
@@ -140,9 +173,62 @@ export function TaskCreateModal({
     setShowOrganization(false);
   };
 
+  const handleFileUpload = async (files: FileList) => {
+    const newFiles: UploadingFile[] = Array.from(files).map((file) => ({
+      file,
+      progress: "uploading" as const,
+    }));
+    setUploadingFiles((prev) => [...prev, ...newFiles]);
+
+    for (let i = 0; i < newFiles.length; i++) {
+      const file = newFiles[i].file;
+      try {
+        const url = await generateUploadUrl();
+        const result = await fetch(url, {
+          method: "POST",
+          headers: { "Content-Type": file.type },
+          body: file,
+        });
+        const { storageId } = await result.json();
+
+        setUploadingFiles((prev) =>
+          prev.map((uf) =>
+            uf.file === file
+              ? {
+                  ...uf,
+                  progress: "done" as const,
+                  result: {
+                    storageId,
+                    filename: file.name,
+                    mimeType: file.type,
+                    size: file.size,
+                  },
+                }
+              : uf
+          )
+        );
+      } catch {
+        setUploadingFiles((prev) =>
+          prev.map((uf) => (uf.file === file ? { ...uf, progress: "error" as const } : uf))
+        );
+        toast.error(`Failed to upload ${file.name}`);
+      }
+    }
+  };
+
+  const handleRemoveFile = (index: number) => {
+    setUploadingFiles((prev) => prev.filter((_, i) => i !== index));
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!title.trim()) return;
+
+    // Don't submit if files are still uploading
+    if (uploadingFiles.some((f) => f.progress === "uploading")) {
+      toast.error("Please wait for file uploads to complete");
+      return;
+    }
 
     setIsSubmitting(true);
     try {
@@ -168,6 +254,11 @@ export function TaskCreateModal({
           }
         : undefined;
 
+      // Collect successful uploads
+      const attachments = uploadingFiles
+        .filter((f): f is UploadingFile & { result: UploadedFile } => f.progress === "done" && !!f.result)
+        .map((f) => f.result);
+
       await createTask({
         workspaceId,
         repositoryId,
@@ -181,6 +272,8 @@ export function TaskCreateModal({
         source: { type: "manual" },
         codeContext,
         labels: labels.length > 0 ? labels : undefined,
+        attachments: attachments.length > 0 ? attachments : undefined,
+        assigneeId,
       });
 
       resetForm();
@@ -248,14 +341,73 @@ export function TaskCreateModal({
 
             {/* Description */}
             <div className="space-y-2">
-              <Label htmlFor="description">Description</Label>
-              <Textarea
-                id="description"
+              <Label>Description</Label>
+              <TiptapEditor
                 value={description}
-                onChange={(e) => setDescription(e.target.value)}
+                onChange={setDescription}
                 placeholder="Describe the task..."
-                rows={3}
               />
+            </div>
+
+            {/* File Attachments */}
+            <div className="space-y-2">
+              <Label>Attachments</Label>
+              <div>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  multiple
+                  className="hidden"
+                  onChange={(e) => {
+                    if (e.target.files?.length) {
+                      handleFileUpload(e.target.files);
+                      e.target.value = "";
+                    }
+                  }}
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => fileInputRef.current?.click()}
+                >
+                  <Paperclip className="size-4 mr-1.5" />
+                  Attach files
+                </Button>
+              </div>
+              {uploadingFiles.length > 0 && (
+                <div className="space-y-1.5 mt-2">
+                  {uploadingFiles.map((uf, i) => (
+                    <div
+                      key={i}
+                      className="flex items-center gap-2 text-sm bg-muted/50 rounded-md px-2.5 py-1.5"
+                    >
+                      {uf.file.type.startsWith("image/") ? (
+                        <ImageIcon className="size-4 text-muted-foreground shrink-0" />
+                      ) : (
+                        <FileIcon className="size-4 text-muted-foreground shrink-0" />
+                      )}
+                      <span className="truncate flex-1">{uf.file.name}</span>
+                      <span className="text-muted-foreground text-xs shrink-0">
+                        {formatFileSize(uf.file.size)}
+                      </span>
+                      {uf.progress === "uploading" && (
+                        <Loader2 className="size-3.5 animate-spin text-muted-foreground shrink-0" />
+                      )}
+                      {uf.progress === "error" && (
+                        <span className="text-destructive text-xs shrink-0">Failed</span>
+                      )}
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveFile(i)}
+                        className="text-muted-foreground hover:text-destructive shrink-0"
+                      >
+                        <X className="size-3.5" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
 
             {/* Type, Priority, Status Row */}
@@ -349,6 +501,40 @@ export function TaskCreateModal({
 
               {showOrganization && (
                 <div className="p-3 pt-0 space-y-3 border-t">
+                  {/* Assignee */}
+                  <div className="space-y-2">
+                    <Label>Assignee</Label>
+                    <Select
+                      value={assigneeId ?? "none"}
+                      onValueChange={(v) =>
+                        setAssigneeId(v === "none" ? undefined : (v as Id<"users">))
+                      }
+                    >
+                      <SelectTrigger className="w-full">
+                        <SelectValue placeholder="Unassigned" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none">Unassigned</SelectItem>
+                        {members?.map((member) => (
+                          <SelectItem key={member.userId} value={member.userId}>
+                            <span className="flex items-center gap-2">
+                              {member.avatarUrl ? (
+                                <img
+                                  src={member.avatarUrl}
+                                  alt=""
+                                  className="size-4 rounded-full"
+                                />
+                              ) : (
+                                <span className="size-4 rounded-full bg-muted" />
+                              )}
+                              {member.name}
+                            </span>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
                   {/* Project */}
                   <div className="space-y-2">
                     <Label>Project</Label>

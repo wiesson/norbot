@@ -205,6 +205,16 @@ export const create = mutation({
         originalText: v.string(),
       })
     ),
+    attachments: v.optional(
+      v.array(
+        v.object({
+          storageId: v.id("_storage"),
+          filename: v.string(),
+          mimeType: v.string(),
+          size: v.number(),
+        })
+      )
+    ),
     labels: v.optional(v.array(v.string())),
     assigneeId: v.optional(v.id("users")),
     createdById: v.optional(v.id("users")),
@@ -253,6 +263,7 @@ export const create = mutation({
       source: args.source,
       codeContext: args.codeContext,
       aiExtraction: args.aiExtraction,
+      attachments: args.attachments,
       labels: args.labels ?? [],
       assigneeId: args.assigneeId,
       createdById: args.createdById,
@@ -426,5 +437,28 @@ export const assign = mutation({
       },
       createdAt: now,
     });
+  },
+});
+
+export const updateDescription = mutation({
+  args: {
+    id: v.id("tasks"),
+    description: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const task = await ctx.db.get(args.id);
+    if (!task) throw new Error("Task not found");
+
+    await ctx.db.patch(args.id, {
+      description: args.description,
+      updatedAt: Date.now(),
+    });
+  },
+});
+
+export const getFileUrl = query({
+  args: { storageId: v.id("_storage") },
+  handler: async (ctx, args) => {
+    return await ctx.storage.getUrl(args.storageId);
   },
 });

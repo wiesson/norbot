@@ -220,7 +220,7 @@ export const createTaskTool = createTool({
           filename: z.string(),
           mimeType: z.string(),
           size: z.number(),
-          slackFileId: z.string(),
+          slackFileId: z.string().optional(),
         })
       )
       .optional()

@@ -10,7 +10,6 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogDescription,
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
@@ -35,7 +34,14 @@ import {
   ExternalLink,
   Clock,
   Loader2,
+  Pencil,
+  X,
+  Check,
+  FileIcon,
+  ImageIcon,
+  Download,
 } from "lucide-react";
+import { TiptapEditor } from "@/components/tiptap-editor";
 
 interface TaskDetailModalProps {
   taskId: Id<"tasks">;
@@ -74,10 +80,59 @@ const taskTypeColors = {
   question: "text-amber-500",
 };
 
+function formatFileSize(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+function AttachmentItem({
+  attachment,
+}: {
+  attachment: {
+    storageId: Id<"_storage">;
+    filename: string;
+    mimeType: string;
+    size: number;
+  };
+}) {
+  const fileUrl = useQuery(api.tasks.getFileUrl, { storageId: attachment.storageId });
+  const isImage = attachment.mimeType.startsWith("image/");
+
+  return (
+    <div className="flex items-center gap-2 bg-muted/50 rounded-md px-2.5 py-1.5">
+      {isImage ? (
+        <ImageIcon className="size-4 text-muted-foreground shrink-0" />
+      ) : (
+        <FileIcon className="size-4 text-muted-foreground shrink-0" />
+      )}
+      <span className="text-sm truncate flex-1">{attachment.filename}</span>
+      <span className="text-muted-foreground text-xs shrink-0">
+        {formatFileSize(attachment.size)}
+      </span>
+      {fileUrl && (
+        <a
+          href={fileUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-muted-foreground hover:text-foreground shrink-0"
+          download={attachment.filename}
+        >
+          <Download className="size-3.5" />
+        </a>
+      )}
+    </div>
+  );
+}
+
 export function TaskDetailModal({ taskId, onClose }: TaskDetailModalProps) {
   const task = useQuery(api.tasks.getById, { id: taskId });
   const updateStatus = useMutation(api.tasks.updateStatus);
+  const updateDescription = useMutation(api.tasks.updateDescription);
   const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
+  const [isEditingDescription, setIsEditingDescription] = useState(false);
+  const [editedDescription, setEditedDescription] = useState("");
+  const [isSavingDescription, setIsSavingDescription] = useState(false);
 
   if (!task) {
     return (
@@ -115,6 +170,32 @@ export function TaskDetailModal({ taskId, onClose }: TaskDetailModalProps) {
     }
   };
 
+  const handleStartEditing = () => {
+    setEditedDescription(task.description ?? "");
+    setIsEditingDescription(true);
+  };
+
+  const handleCancelEditing = () => {
+    setIsEditingDescription(false);
+    setEditedDescription("");
+  };
+
+  const handleSaveDescription = async () => {
+    setIsSavingDescription(true);
+    try {
+      await updateDescription({
+        id: taskId,
+        description: editedDescription,
+      });
+      setIsEditingDescription(false);
+    } catch (error) {
+      console.error("Failed to update description:", error);
+      toast.error("Failed to update description");
+    } finally {
+      setIsSavingDescription(false);
+    }
+  };
+
   return (
     <Dialog open onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="sm:max-w-2xl max-h-[85vh] overflow-y-auto">
@@ -134,14 +215,94 @@ export function TaskDetailModal({ taskId, onClose }: TaskDetailModalProps) {
             </Badge>
           </div>
           <DialogTitle className="text-xl">{task.title}</DialogTitle>
-          {task.description && (
-            <DialogDescription className="mt-2 whitespace-pre-wrap">
-              {task.description}
-            </DialogDescription>
-          )}
         </DialogHeader>
 
+        {/* Description */}
+        <div className="space-y-2">
+          <div className="flex items-center justify-between">
+            <h4 className="text-sm font-medium">Description</h4>
+            {!isEditingDescription ? (
+              <Button variant="ghost" size="sm" className="h-7 px-2" onClick={handleStartEditing}>
+                <Pencil className="size-3 mr-1" />
+                Edit
+              </Button>
+            ) : (
+              <div className="flex gap-1">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-7 px-2"
+                  onClick={handleCancelEditing}
+                  disabled={isSavingDescription}
+                >
+                  <X className="size-3 mr-1" />
+                  Cancel
+                </Button>
+                <Button
+                  variant="default"
+                  size="sm"
+                  className="h-7 px-2"
+                  onClick={handleSaveDescription}
+                  disabled={isSavingDescription}
+                >
+                  {isSavingDescription ? (
+                    <Loader2 className="size-3 mr-1 animate-spin" />
+                  ) : (
+                    <Check className="size-3 mr-1" />
+                  )}
+                  Save
+                </Button>
+              </div>
+            )}
+          </div>
+          {isEditingDescription ? (
+            <TiptapEditor
+              value={editedDescription}
+              onChange={setEditedDescription}
+              editable
+              placeholder="Add a description..."
+            />
+          ) : task.description ? (
+            <TiptapEditor value={task.description} editable={false} />
+          ) : (
+            <p className="text-sm text-muted-foreground italic">No description</p>
+          )}
+        </div>
+
         <Separator />
+
+        {/* Attachments */}
+        {task.attachments && task.attachments.length > 0 && (
+          <>
+            <div className="space-y-2">
+              <h4 className="text-sm font-medium">Attachments</h4>
+              {/* Image thumbnails */}
+              {task.attachments.some((a) => a.mimeType.startsWith("image/")) && (
+                <div className="flex flex-wrap gap-2">
+                  {task.attachments
+                    .filter((a) => a.mimeType.startsWith("image/"))
+                    .map((attachment) => (
+                      <AttachmentThumbnail
+                        key={attachment.storageId}
+                        storageId={attachment.storageId as Id<"_storage">}
+                        filename={attachment.filename}
+                      />
+                    ))}
+                </div>
+              )}
+              {/* File list */}
+              <div className="space-y-1.5">
+                {task.attachments.map((attachment) => (
+                  <AttachmentItem
+                    key={attachment.storageId}
+                    attachment={attachment as { storageId: Id<"_storage">; filename: string; mimeType: string; size: number }}
+                  />
+                ))}
+              </div>
+            </div>
+            <Separator />
+          </>
+        )}
 
         {/* Status & Actions */}
         <div className="grid grid-cols-2 gap-4">
@@ -324,5 +485,32 @@ export function TaskDetailModal({ taskId, onClose }: TaskDetailModalProps) {
         <DialogFooter showCloseButton />
       </DialogContent>
     </Dialog>
+  );
+}
+
+function AttachmentThumbnail({
+  storageId,
+  filename,
+}: {
+  storageId: Id<"_storage">;
+  filename: string;
+}) {
+  const fileUrl = useQuery(api.tasks.getFileUrl, { storageId });
+
+  if (!fileUrl) return null;
+
+  return (
+    <a
+      href={fileUrl}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="block rounded-md overflow-hidden border hover:ring-2 hover:ring-ring transition-shadow"
+    >
+      <img
+        src={fileUrl}
+        alt={filename}
+        className="h-20 w-auto object-cover"
+      />
+    </a>
   );
 }
