@@ -35,7 +35,7 @@
     "@tiptap/react": "^3.19.0",
     "@tiptap/starter-kit": "^3.19.0",
     "ai": "6.0.86",
-    "better-auth": "1.4.9",
+    "better-auth": "1.4.18",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "convex": "^1.31.7",
@@ -52,18 +52,18 @@
   "devDependencies": {
     "@tailwindcss/postcss": "^4.1.18",
     "@tailwindcss/vite": "^4.1.18",
-    "@tanstack/react-start": "^1.160.0",
-    "@tanstack/router-plugin": "^1.160.0",
+    "@tanstack/react-start": "^1.160.1",
+    "@tanstack/router-plugin": "^1.160.1",
     "@types/node": "^25.2.3",
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
     "@typescript/native-preview": "7.0.0-dev.20260216.1",
     "@vitejs/plugin-react": "^5.1.4",
-    "oxfmt": "^0.32.0",
-    "oxlint": "^1.47.0",
+    "oxfmt": "^0.33.0",
+    "oxlint": "^1.48.0",
     "tailwindcss": "^4.1.18",
     "typescript": "^5.9.3",
-    "vite": "^7.3.1",
+    "vite": "8.0.0-beta.14",
     "vite-tsconfig-paths": "^6.1.1"
   }
 }
