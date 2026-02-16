@@ -2,8 +2,13 @@ import { httpRouter } from "convex/server";
 import { httpAction } from "./_generated/server";
 import { internal } from "./_generated/api";
 import { Id } from "./_generated/dataModel";
+import { authComponent, createAuth } from "./auth";
 
 const http = httpRouter();
+
+authComponent.registerRoutes(http, createAuth, {
+  cors: true,
+});
 
 // ===========================================
 // SLACK EVENTS WEBHOOK

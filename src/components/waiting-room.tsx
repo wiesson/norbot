@@ -5,6 +5,7 @@ import { buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import { Clock, LogOut, Github } from "lucide-react";
+import { LogoutButton } from "@/components/logout-button";
 
 interface User {
   _id: string;
@@ -35,16 +36,11 @@ export function WaitingRoom({ user }: WaitingRoomProps) {
                 {user.name}
               </span>
             </div>
-            <form action="/api/auth/logout" method="POST" className="inline">
-              <button
-                type="submit"
-                className={cn(
-                  buttonVariants({ variant: "ghost", size: "icon" })
-                )}
-              >
-                <LogOut className="h-5 w-5" />
-              </button>
-            </form>
+            <LogoutButton
+              className={cn(buttonVariants({ variant: "ghost", size: "icon" }))}
+            >
+              <LogOut className="h-5 w-5" />
+            </LogoutButton>
           </div>
         </div>
       </header>

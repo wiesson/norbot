@@ -1,28 +1,38 @@
 "use client";
 
 import { useQuery } from "convex/react";
-import { useQuery as useTanstackQuery } from "@tanstack/react-query";
+import { useEffect, useRef } from "react";
 import { api } from "@convex/_generated/api";
+import { useMutation } from "convex/react";
+import { authClient } from "@/lib/auth-client";
 
 export function useAuth() {
-  // Fetch session token using TanStack Query (cached, no re-fetch on navigation)
-  const { data: sessionData, isLoading: sessionLoading } = useTanstackQuery({
-    queryKey: ["session"],
-    queryFn: () => fetch("/api/auth/session").then((res) => res.json()),
-    staleTime: Infinity, // Session doesn't change during session
-    retry: false,
-  });
-  const sessionToken = sessionData?.token ?? null;
+  const { data: session, isPending: sessionLoading } = authClient.useSession();
+  const user = useQuery(api.auth.viewer, session ? {} : "skip");
+  const syncUser = useMutation(api.auth.syncUser);
+  const isSyncingRef = useRef(false);
 
-  // Skip Convex query until we have a token to avoid race condition
-  const user = useQuery(api.users.me, sessionToken ? { sessionToken } : "skip");
+  useEffect(() => {
+    if (!session || user !== null || isSyncingRef.current) {
+      return;
+    }
 
-  // Still loading if: fetching token OR (have token but query pending)
-  const queryLoading = sessionToken !== null && user === undefined;
+    isSyncingRef.current = true;
+    syncUser({})
+      .catch((error) => {
+        console.error("Failed to sync auth user:", error);
+      })
+      .finally(() => {
+        isSyncingRef.current = false;
+      });
+  }, [session, user, syncUser]);
+
+  const queryLoading = !!session && user === undefined;
 
   return {
     user: user ?? null,
     isLoading: sessionLoading || queryLoading,
-    isAuthenticated: !!user,
+    isAuthenticated: !!session,
+    session,
   };
 }

@@ -83,7 +83,10 @@ export function TiptapEditor({
     if (!editor) return;
     const currentMd = editor.getMarkdown();
     if (value !== currentMd) {
-      editor.commands.setContent(value);
+      editor.commands.setContent(value, {
+        contentType: "markdown",
+        emitUpdate: false,
+      });
     }
   }, [value, editor]);
 

@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { LogOut, Settings } from "lucide-react";
 import Link from "next/link";
+import { LogoutButton } from "@/components/logout-button";
 
 interface Workspace {
   _id: string;
@@ -57,16 +58,11 @@ export function Dashboard({ user }: DashboardProps) {
                 {user.name}
               </span>
             </div>
-            <form action="/api/auth/logout" method="POST" className="inline">
-              <button
-                type="submit"
-                className={cn(
-                  buttonVariants({ variant: "ghost", size: "icon" })
-                )}
-              >
-                <LogOut className="h-5 w-5" />
-              </button>
-            </form>
+            <LogoutButton
+              className={cn(buttonVariants({ variant: "ghost", size: "icon" }))}
+            >
+              <LogOut className="h-5 w-5" />
+            </LogoutButton>
           </div>
         </div>
       </header>

@@ -115,10 +115,10 @@ TM-43: Add dark mode [todo] medium
 
 ## Tech Stack
 
-- **Frontend**: Next.js 16, React 19, shadcn/ui (base-ui)
+- **Frontend**: Vite + TanStack Router, React 19, shadcn/ui (base-ui)
 - **Backend**: Convex (real-time database + serverless functions)
 - **AI**: Claude via Convex Agents (@convex-dev/agent)
-- **Auth**: GitHub OAuth
+- **Auth**: Better Auth (GitHub, Google, magic-link)
 
 ## Quick Start
 
@@ -165,9 +165,14 @@ Also add to `.env.local`:
 NEXT_PUBLIC_CONVEX_URL=https://YOUR_DEPLOYMENT.convex.cloud
 NEXT_PUBLIC_APP_URL=http://localhost:3000
 
+# Better Auth providers
 # GitHub OAuth (create at github.com/settings/developers)
 GITHUB_CLIENT_ID=...
 GITHUB_CLIENT_SECRET=...
+GOOGLE_CLIENT_ID=...
+GOOGLE_CLIENT_SECRET=...
+MAGIC_LINK_FROM_EMAIL="Norbot <auth@yourdomain.com>"
+RESEND_API_KEY=...
 ```
 
 ### 5. Run the app
@@ -180,7 +185,7 @@ Open [http://localhost:3000](http://localhost:3000)
 
 ## Usage
 
-1. **Login** with GitHub
+1. **Login** with GitHub, Google, or magic link
 2. **Create workspace** or accept an invite
 3. **Setup wizard**: Connect Slack app, link GitHub repos, map channels
 4. **Configure**: Set up projects with short codes and keywords
@@ -195,7 +200,7 @@ Open [http://localhost:3000](http://localhost:3000)
 
 ```
 ├── src/
-│   ├── app/                    # Next.js pages
+│   ├── app/                    # Legacy Next pages reused by TanStack routes during migration
 │   │   ├── w/[slug]/          # Workspace dashboard + settings
 │   │   ├── invite/[token]/    # Invitation acceptance
 │   │   └── login/             # GitHub OAuth
