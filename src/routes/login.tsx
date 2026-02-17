@@ -1,21 +1,24 @@
-"use client";
-
 import { FormEvent, useEffect, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
+import { createServerFn } from "@tanstack/react-start";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { useQuery } from "convex/react";
+import { fetchAuthQuery } from "@/lib/auth-server";
 import { api } from "@convex/_generated/api";
 import { authClient } from "@/lib/auth-client";
 import { useNavigate } from "@tanstack/react-router";
 import { redirectAuthenticatedToHome } from "@/lib/route-auth";
 
+const getProviders = createServerFn({ method: "GET" }).handler(async () => {
+  return await fetchAuthQuery(api.auth.providersStatus, {});
+});
+
 function LoginRouteView() {
   const navigate = useNavigate();
   const { data: session } = authClient.useSession();
-  const providers = useQuery(api.auth.providersStatus, {});
+  const providers = Route.useLoaderData();
   const [email, setEmail] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
@@ -78,10 +81,6 @@ function LoginRouteView() {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          {providers === undefined && (
-            <p className="text-sm text-muted-foreground">Loading available login methods...</p>
-          )}
-
           {providers?.github && (
             <Button
               type="button"
@@ -155,5 +154,6 @@ export const Route = createFileRoute("/login")({
   beforeLoad: ({ context }) => {
     redirectAuthenticatedToHome(context);
   },
+  loader: () => getProviders(),
   component: LoginRouteView,
 });
