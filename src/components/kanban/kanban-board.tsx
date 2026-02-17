@@ -2,7 +2,7 @@
 
 import { useState, useMemo, useCallback, useRef, useEffect } from "react";
 import { useQuery, useMutation } from "convex/react";
-import { useRouter, useSearchParams } from "@/compat/next-navigation";
+import { useRouter, useRouterState } from "@tanstack/react-router";
 import { api } from "@convex/_generated/api";
 import {
   DndContext,
@@ -39,7 +39,11 @@ const columns = [
 
 export function KanbanBoard({ workspaceId, repositoryId, projectId }: KanbanBoardProps) {
   const router = useRouter();
-  const searchParams = useSearchParams();
+  const searchStr = useRouterState({ select: (state) => state.location.searchStr });
+  const searchParams = useMemo(() => {
+    const raw = searchStr.startsWith("?") ? searchStr.slice(1) : searchStr;
+    return new URLSearchParams(raw);
+  }, [searchStr]);
 
   // URL-based task selection (persist modal state to URL)
   const taskIdFromUrl = searchParams.get("task") as Id<"tasks"> | null;
@@ -84,7 +88,7 @@ export function KanbanBoard({ workspaceId, repositoryId, projectId }: KanbanBoar
       } else {
         params.delete("task");
       }
-      router.replace(`?${params.toString()}`, { scroll: false });
+      router.history.replace(`?${params.toString()}`);
     }
   }, [selectedTaskId, taskIdFromUrl, router, searchParams]);
 

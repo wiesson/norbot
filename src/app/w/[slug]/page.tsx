@@ -4,14 +4,13 @@ import { use, useEffect } from "react";
 import { useQuery } from "convex/react";
 import { api } from "@convex/_generated/api";
 import { useAuth } from "@/hooks/use-auth";
-import { useRouter } from "@/compat/next-navigation";
+import { useRouter } from "@tanstack/react-router";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { buttonVariants } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import { Settings, LogOut, ChevronLeft, Slack, ArrowRight, FolderKanban } from "lucide-react";
-import Link from "@/compat/next-link";
 
 interface WorkspacePageProps {
   params: Promise<{ slug: string }>;
@@ -30,7 +29,7 @@ export default function WorkspacePage({ params }: WorkspacePageProps) {
 
   useEffect(() => {
     if (!authLoading && !isAuthenticated) {
-      router.push("/login");
+      router.history.push("/login");
     }
   }, [authLoading, isAuthenticated, router]);
 
@@ -51,12 +50,12 @@ export default function WorkspacePage({ params }: WorkspacePageProps) {
       <header className="border-b bg-white dark:bg-neutral-900 sticky top-0 z-10">
         <div className="container mx-auto px-4 py-3 flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <Link
+            <a
               href="/"
               className={cn(buttonVariants({ variant: "ghost", size: "icon" }), "mr-2")}
             >
               <ChevronLeft className="h-5 w-5" />
-            </Link>
+            </a>
             <div>
               <h1 className="text-lg font-bold flex items-center gap-2">
                 {workspace.name}
@@ -70,12 +69,12 @@ export default function WorkspacePage({ params }: WorkspacePageProps) {
           </div>
 
           <div className="flex items-center gap-4">
-            <Link
+            <a
               href={`/w/${slug}/settings`}
               className={cn(buttonVariants({ variant: "ghost", size: "icon" }))}
             >
               <Settings className="h-5 w-5" />
-            </Link>
+            </a>
             <div className="flex items-center gap-2">
               <Avatar className="h-8 w-8">
                 <AvatarImage src={user.avatarUrl} alt={user.name} />
@@ -83,12 +82,12 @@ export default function WorkspacePage({ params }: WorkspacePageProps) {
               </Avatar>
               <span className="text-sm font-medium hidden sm:inline">{user.name}</span>
             </div>
-            <Link
+            <a
               href="/api/auth/logout"
               className={cn(buttonVariants({ variant: "ghost", size: "icon" }))}
             >
               <LogOut className="h-5 w-5" />
-            </Link>
+            </a>
           </div>
         </div>
       </header>
@@ -103,7 +102,7 @@ export default function WorkspacePage({ params }: WorkspacePageProps) {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-            <Link href={`/w/${slug}/p/all`}>
+            <a href={`/w/${slug}/p/all`}>
               <Card className="hover:border-primary transition-colors h-full">
                 <CardHeader>
                   <CardTitle className="flex items-center justify-between">
@@ -116,10 +115,10 @@ export default function WorkspacePage({ params }: WorkspacePageProps) {
                   <Badge variant="secondary">ALL</Badge>
                 </CardContent>
               </Card>
-            </Link>
+            </a>
 
             {projects?.map((project) => (
-              <Link key={project._id} href={`/w/${slug}/p/${project.shortCode}`}>
+              <a key={project._id} href={`/w/${slug}/p/${project.shortCode}`}>
                 <Card className="hover:border-primary transition-colors h-full">
                   <CardHeader>
                     <CardTitle className="flex items-center justify-between">
@@ -135,7 +134,7 @@ export default function WorkspacePage({ params }: WorkspacePageProps) {
                     <FolderKanban className="h-4 w-4 text-muted-foreground" />
                   </CardContent>
                 </Card>
-              </Link>
+              </a>
             ))}
           </div>
 

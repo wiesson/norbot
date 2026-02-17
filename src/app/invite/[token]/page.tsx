@@ -4,7 +4,7 @@ import { use, useEffect, useState } from "react";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@convex/_generated/api";
 import { useAuth } from "@/hooks/use-auth";
-import { useRouter } from "@/compat/next-navigation";
+import { useRouter } from "@tanstack/react-router";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -70,9 +70,9 @@ export default function AcceptInvitationPage({ params }: AcceptInvitationPagePro
       // Redirect to workspace after a brief delay
       setTimeout(() => {
         if (invitation.workspace) {
-          router.push(`/w/${invitation.workspace.slug}`);
+          router.history.push(`/w/${invitation.workspace.slug}`);
         } else {
-          router.push("/");
+          router.history.push("/");
         }
       }, 1500);
     } catch (err) {
@@ -84,7 +84,7 @@ export default function AcceptInvitationPage({ params }: AcceptInvitationPagePro
 
   const handleLogin = () => {
     // Token is already stored in sessionStorage, redirect to login
-    router.push("/login");
+    router.history.push("/login");
   };
 
   // Loading state
@@ -107,7 +107,7 @@ export default function AcceptInvitationPage({ params }: AcceptInvitationPagePro
             <p className="text-muted-foreground mb-4">
               This invitation link is invalid or has been cancelled.
             </p>
-            <Button onClick={() => router.push("/")}>Go to Home</Button>
+            <Button onClick={() => router.history.push("/")}>Go to Home</Button>
           </CardContent>
         </Card>
       </div>
@@ -196,8 +196,8 @@ export default function AcceptInvitationPage({ params }: AcceptInvitationPagePro
                 className="mt-4"
                 onClick={() =>
                   invitation.workspace
-                    ? router.push(`/w/${invitation.workspace.slug}`)
-                    : router.push("/")
+                    ? router.history.push(`/w/${invitation.workspace.slug}`)
+                    : router.history.push("/")
                 }
               >
                 Go to Workspace

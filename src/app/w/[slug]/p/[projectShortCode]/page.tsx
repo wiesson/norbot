@@ -1,10 +1,10 @@
 "use client";
 
-import { use, useEffect } from "react";
+import { use, useEffect, useMemo } from "react";
 import { useQuery } from "convex/react";
 import { api } from "@convex/_generated/api";
 import { useAuth } from "@/hooks/use-auth";
-import { useRouter, useSearchParams } from "@/compat/next-navigation";
+import { useRouter, useRouterState } from "@tanstack/react-router";
 import { KanbanBoard } from "@/components/kanban/kanban-board";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { buttonVariants } from "@/components/ui/button";
@@ -19,7 +19,6 @@ import {
 import { Card, CardContent } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import { Settings, LogOut, ChevronLeft, GitBranch, Slack } from "lucide-react";
-import Link from "@/compat/next-link";
 import type { Id } from "@convex/_generated/dataModel";
 
 interface ProjectPageProps {
@@ -30,7 +29,11 @@ export default function ProjectPage({ params }: ProjectPageProps) {
   const { slug, projectShortCode } = use(params);
   const { user, isLoading: authLoading, isAuthenticated } = useAuth();
   const router = useRouter();
-  const searchParams = useSearchParams();
+  const searchStr = useRouterState({ select: (state) => state.location.searchStr });
+  const searchParams = useMemo(() => {
+    const raw = searchStr.startsWith("?") ? searchStr.slice(1) : searchStr;
+    return new URLSearchParams(raw);
+  }, [searchStr]);
 
   const repoFilter = searchParams.get("repo");
   const isAllProjects = projectShortCode.toLowerCase() === "all";
@@ -51,7 +54,7 @@ export default function ProjectPage({ params }: ProjectPageProps) {
 
   useEffect(() => {
     if (!authLoading && !isAuthenticated) {
-      router.push("/login");
+      router.history.push("/login");
     }
   }, [authLoading, isAuthenticated, router]);
 
@@ -64,7 +67,7 @@ export default function ProjectPage({ params }: ProjectPageProps) {
       params.set("repo", value);
     }
     const query = params.toString();
-    router.push(query ? `?${query}` : "?", { scroll: false });
+    router.history.push(query ? `?${query}` : "?");
   };
 
   if (authLoading || !workspace || !projects) {
@@ -83,13 +86,13 @@ export default function ProjectPage({ params }: ProjectPageProps) {
     return (
       <div className="min-h-screen bg-neutral-50 dark:bg-neutral-950">
         <div className="container mx-auto px-4 py-8 max-w-2xl">
-          <Link
+          <a
             href={`/w/${slug}`}
             className={cn(buttonVariants({ variant: "ghost", size: "sm" }), "mb-6")}
           >
             <ChevronLeft className="mr-2 h-4 w-4" />
             Back to Projects
-          </Link>
+          </a>
           <Card>
             <CardContent className="py-8 text-center space-y-2">
               <p className="font-medium">Project not found</p>
@@ -108,12 +111,12 @@ export default function ProjectPage({ params }: ProjectPageProps) {
       <header className="border-b bg-white dark:bg-neutral-900 sticky top-0 z-10">
         <div className="container mx-auto px-4 py-3 flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <Link
+            <a
               href={`/w/${slug}`}
               className={cn(buttonVariants({ variant: "ghost", size: "icon" }), "mr-2")}
             >
               <ChevronLeft className="h-5 w-5" />
-            </Link>
+            </a>
             <div>
               <h1 className="text-lg font-bold flex items-center gap-2">
                 {workspace.name}
@@ -131,11 +134,11 @@ export default function ProjectPage({ params }: ProjectPageProps) {
 
           <div className="flex items-center gap-4">
             <div className="hidden lg:flex gap-1">
-              <Link href={`/w/${slug}/p/all`} className={buttonVariants({ size: "sm", variant: isAllProjects ? "default" : "outline" })}>
+              <a href={`/w/${slug}/p/all`} className={buttonVariants({ size: "sm", variant: isAllProjects ? "default" : "outline" })}>
                 All
-              </Link>
+              </a>
               {projects.map((project) => (
-                <Link
+                <a
                   key={project._id}
                   href={`/w/${slug}/p/${project.shortCode}`}
                   className={buttonVariants({
@@ -144,7 +147,7 @@ export default function ProjectPage({ params }: ProjectPageProps) {
                   })}
                 >
                   {project.shortCode}
-                </Link>
+                </a>
               ))}
             </div>
 
@@ -168,12 +171,12 @@ export default function ProjectPage({ params }: ProjectPageProps) {
               </Select>
             )}
 
-            <Link
+            <a
               href={`/w/${slug}/settings`}
               className={cn(buttonVariants({ variant: "ghost", size: "icon" }))}
             >
               <Settings className="h-5 w-5" />
-            </Link>
+            </a>
             <div className="flex items-center gap-2">
               <Avatar className="h-8 w-8">
                 <AvatarImage src={user.avatarUrl} alt={user.name} />
@@ -183,12 +186,12 @@ export default function ProjectPage({ params }: ProjectPageProps) {
                 {user.name}
               </span>
             </div>
-            <Link
+            <a
               href="/api/auth/logout"
               className={cn(buttonVariants({ variant: "ghost", size: "icon" }))}
             >
               <LogOut className="h-5 w-5" />
-            </Link>
+            </a>
           </div>
         </div>
       </header>

@@ -4,7 +4,7 @@ import { use, useEffect, useState } from "react";
 import { useQuery, useMutation, useAction } from "convex/react";
 import { api } from "@convex/_generated/api";
 import { useAuth } from "@/hooks/use-auth";
-import { useRouter } from "@/compat/next-navigation";
+import { useRouter } from "@tanstack/react-router";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button, buttonVariants } from "@/components/ui/button";
@@ -40,7 +40,6 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
-import Link from "@/compat/next-link";
 import { ArrowLeft, Slack, Trash2, UserMinus, Lock, Globe, Plus, FolderGit2, UserPlus, Hash, Key } from "lucide-react";
 import { ApiKeysSection } from "@/components/settings/api-keys-section";
 import type { Id } from "@convex/_generated/dataModel";
@@ -135,7 +134,7 @@ export default function WorkspaceSettingsPage({ params }: WorkspaceSettingsPageP
   // Auth redirect
   useEffect(() => {
     if (!authLoading && !isAuthenticated) {
-      router.push("/login");
+      router.history.push("/login");
     }
   }, [authLoading, isAuthenticated, router]);
 
@@ -199,14 +198,14 @@ export default function WorkspaceSettingsPage({ params }: WorkspaceSettingsPageP
   const handleDeleteWorkspace = async () => {
     if (workspace) {
       await deleteWorkspace({ id: workspace._id });
-      router.push("/");
+      router.history.push("/");
     }
   };
 
   const handleRestartSetup = async () => {
     if (user) {
       await resetOnboarding({ userId: user._id });
-      router.push("/setup");
+      router.history.push("/setup");
     }
   };
 
@@ -336,13 +335,13 @@ export default function WorkspaceSettingsPage({ params }: WorkspaceSettingsPageP
   return (
     <div className="min-h-screen bg-neutral-50 dark:bg-neutral-950">
       <div className="container mx-auto px-4 py-8 max-w-2xl">
-        <Link
+        <a
           href={`/w/${slug}`}
           className={cn(buttonVariants({ variant: "ghost", size: "sm" }), "mb-6")}
         >
           <ArrowLeft className="mr-2 h-4 w-4" />
           Back to Workspace
-        </Link>
+        </a>
 
         <h1 className="text-2xl font-bold mb-6">Workspace Settings</h1>
 
@@ -581,12 +580,12 @@ export default function WorkspaceSettingsPage({ params }: WorkspaceSettingsPageP
           <CardHeader className="flex flex-row items-center justify-between">
             <CardTitle>Members</CardTitle>
             {isAdmin && (
-              <Link href={`/w/${slug}/invite`}>
+              <a href={`/w/${slug}/invite`}>
                 <Button variant="outline" size="sm">
                   <UserPlus className="h-4 w-4 mr-2" />
                   Invite
                 </Button>
-              </Link>
+              </a>
             )}
           </CardHeader>
           <CardContent>

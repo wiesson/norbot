@@ -1,7 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useState, useRef } from "react";
-import { useRouter, useSearchParams } from "@/compat/next-navigation";
+import { useCallback, useEffect, useMemo, useState, useRef } from "react";
+import { useRouter, useRouterState } from "@tanstack/react-router";
 import { useMutation, useAction, useQuery } from "convex/react";
 import { useQuery as useTanstackQuery } from "@tanstack/react-query";
 import { api } from "@convex/_generated/api";
@@ -54,7 +54,11 @@ interface SetupWizardProps {
 
 export function SetupWizard({ user }: SetupWizardProps) {
   const router = useRouter();
-  const searchParams = useSearchParams();
+  const searchStr = useRouterState({ select: (state) => state.location.searchStr });
+  const searchParams = useMemo(() => {
+    const raw = searchStr.startsWith("?") ? searchStr.slice(1) : searchStr;
+    return new URLSearchParams(raw);
+  }, [searchStr]);
 
   // Get step from URL or default to github
   const urlStep = searchParams.get("step") as Step | null;
@@ -113,7 +117,7 @@ export function SetupWizard({ user }: SetupWizardProps) {
   const goToStep = useCallback(
     (step: Step) => {
       setCurrentStep(step);
-      router.push(`/setup?step=${step}`, { scroll: false });
+      router.history.push(`/setup?step=${step}`);
     },
     [router]
   );
@@ -189,7 +193,7 @@ export function SetupWizard({ user }: SetupWizardProps) {
   }, [completeOnboarding, user._id, goToStep]);
 
   const handleGoToDashboard = useCallback(() => {
-    router.push("/");
+    router.history.push("/");
   }, [router]);
 
   return (

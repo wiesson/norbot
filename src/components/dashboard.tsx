@@ -6,7 +6,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { LogOut, Settings } from "lucide-react";
-import Link from "@/compat/next-link";
 import { LogoutButton } from "@/components/logout-button";
 
 interface Workspace {
@@ -43,12 +42,12 @@ export function Dashboard({ user }: DashboardProps) {
             <h1 className="text-xl font-bold text-emerald-600">Norbot</h1>
           </div>
           <div className="flex items-center gap-4">
-            <Link
+            <a
               href="/settings"
               className={cn(buttonVariants({ variant: "ghost", size: "icon" }))}
             >
               <Settings className="h-5 w-5" />
-            </Link>
+            </a>
             <div className="flex items-center gap-2">
               <Avatar className="h-8 w-8">
                 <AvatarImage src={user.avatarUrl} alt={user.name} />
@@ -81,7 +80,7 @@ export function Dashboard({ user }: DashboardProps) {
         {workspaces.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {workspaces.map((workspace) => (
-              <Link key={workspace._id} href={`/w/${workspace.slug}`}>
+              <a key={workspace._id} href={`/w/${workspace.slug}`}>
                 <Card className="hover:border-emerald-500 transition-colors cursor-pointer">
                   <CardHeader>
                     <div className="flex items-center justify-between">
@@ -95,7 +94,7 @@ export function Dashboard({ user }: DashboardProps) {
                     </p>
                   </CardContent>
                 </Card>
-              </Link>
+              </a>
             ))}
           </div>
         ) : (

@@ -4,7 +4,7 @@ import { use, useState } from "react";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@convex/_generated/api";
 import { useAuth } from "@/hooks/use-auth";
-import { useRouter } from "@/compat/next-navigation";
+import { useRouter } from "@tanstack/react-router";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button, buttonVariants } from "@/components/ui/button";
@@ -19,7 +19,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
-import Link from "@/compat/next-link";
 import { ArrowLeft, UserPlus, Copy, Check, Clock, X, Github, Users } from "lucide-react";
 import type { Doc } from "@convex/_generated/dataModel";
 
@@ -103,7 +102,7 @@ export default function InvitePage({ params }: InvitePageProps) {
 
   // Auth redirect
   if (!authLoading && !isAuthenticated) {
-    router.push("/login");
+    router.history.push("/login");
     return null;
   }
 
@@ -125,13 +124,13 @@ export default function InvitePage({ params }: InvitePageProps) {
     return (
       <div className="min-h-screen bg-neutral-50 dark:bg-neutral-950">
         <div className="container mx-auto px-4 py-8 max-w-2xl">
-          <Link
+          <a
             href={`/w/${slug}/settings`}
             className={cn(buttonVariants({ variant: "ghost", size: "sm" }), "mb-6")}
           >
             <ArrowLeft className="mr-2 h-4 w-4" />
             Back to Settings
-          </Link>
+          </a>
 
           <Card>
             <CardContent className="py-8 text-center">
@@ -148,13 +147,13 @@ export default function InvitePage({ params }: InvitePageProps) {
   return (
     <div className="min-h-screen bg-neutral-50 dark:bg-neutral-950">
       <div className="container mx-auto px-4 py-8 max-w-2xl">
-        <Link
+        <a
           href={`/w/${slug}/settings`}
           className={cn(buttonVariants({ variant: "ghost", size: "sm" }), "mb-6")}
         >
           <ArrowLeft className="mr-2 h-4 w-4" />
           Back to Settings
-        </Link>
+        </a>
 
         <h1 className="text-2xl font-bold mb-6">Invite Members</h1>
 
