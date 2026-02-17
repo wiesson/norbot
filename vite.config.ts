@@ -20,5 +20,4 @@ export default defineConfig({
   ssr: {
     noExternal: ["@convex-dev/better-auth"],
   },
-  envPrefix: ["VITE_", "NEXT_PUBLIC_"],
 });

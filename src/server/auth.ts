@@ -13,12 +13,8 @@ function readEnv(...keys: string[]): string | undefined {
 }
 
 function getConvexConfig() {
-  const convexUrl = readEnv("VITE_CONVEX_URL", "NEXT_PUBLIC_CONVEX_URL", "CONVEX_URL");
-  const convexSiteUrl = readEnv(
-    "VITE_CONVEX_SITE_URL",
-    "NEXT_PUBLIC_CONVEX_SITE_URL",
-    "CONVEX_SITE_URL"
-  );
+  const convexUrl = readEnv("VITE_CONVEX_URL", "CONVEX_URL");
+  const convexSiteUrl = readEnv("VITE_CONVEX_SITE_URL", "CONVEX_SITE_URL");
 
   if (!convexUrl || !convexSiteUrl) {
     return null;
