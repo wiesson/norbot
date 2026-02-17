@@ -1,18 +1,15 @@
 import { redirect } from "@tanstack/react-router";
-import { getServerSessionStatus } from "@/server/auth";
 
-export async function requireServerSession() {
-  const { hasSession } = await getServerSessionStatus();
-
-  if (!hasSession) {
+export function requireAuth(context: { isAuthenticated: boolean }) {
+  if (!context.isAuthenticated) {
     throw redirect({ to: "/login" });
   }
 }
 
-export async function redirectAuthenticatedToHome() {
-  const { hasSession } = await getServerSessionStatus();
-
-  if (hasSession) {
+export function redirectAuthenticatedToHome(context: {
+  isAuthenticated: boolean;
+}) {
+  if (context.isAuthenticated) {
     throw redirect({ to: "/" });
   }
 }

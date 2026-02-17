@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import WorkspaceInvitePage from "@/app/w/[slug]/invite/page";
-import { requireServerSession } from "@/lib/route-auth";
+import { requireAuth } from "@/lib/route-auth";
 
 function WorkspaceInviteRouteComponent() {
   const { slug } = Route.useParams();
@@ -8,8 +8,8 @@ function WorkspaceInviteRouteComponent() {
 }
 
 export const Route = createFileRoute("/w/$slug/invite")({
-  beforeLoad: async () => {
-    await requireServerSession();
+  beforeLoad: ({ context }) => {
+    requireAuth(context);
   },
   component: WorkspaceInviteRouteComponent,
 });

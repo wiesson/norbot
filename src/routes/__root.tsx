@@ -1,32 +1,28 @@
+/// <reference types="vite/client" />
 import {
-  Outlet,
   HeadContent,
+  Outlet,
   Scripts,
-  createRootRoute,
+  createRootRouteWithContext,
+  useRouteContext,
 } from "@tanstack/react-router";
-import { Providers } from "@/app/providers";
+import { createServerFn } from "@tanstack/react-start";
+import { ConvexBetterAuthProvider } from "@convex-dev/better-auth/react";
+import type { ConvexQueryClient } from "@convex-dev/react-query";
+import type { QueryClient } from "@tanstack/react-query";
+import { authClient } from "@/lib/auth-client";
+import { getToken } from "@/lib/auth-server";
 import { Toaster } from "@/components/ui/sonner";
 import appCss from "@/app/globals.css?url";
 
-function RootComponent() {
-  return (
-    <html lang="en">
-      <head>
-        <HeadContent />
-      </head>
-      <body className="antialiased">
-        <Providers>
-          <Outlet />
-          <Toaster />
-        </Providers>
-        <Scripts />
-      </body>
-    </html>
-  );
-}
+const getAuth = createServerFn({ method: "GET" }).handler(async () => {
+  return await getToken();
+});
 
-export const Route = createRootRoute({
-  component: RootComponent,
+export const Route = createRootRouteWithContext<{
+  queryClient: QueryClient;
+  convexQueryClient: ConvexQueryClient;
+}>()({
   head: () => ({
     meta: [
       { charSet: "utf-8" },
@@ -39,4 +35,42 @@ export const Route = createRootRoute({
     ],
     links: [{ rel: "stylesheet", href: appCss }],
   }),
+  beforeLoad: async (ctx) => {
+    const token = await getAuth();
+    if (token) {
+      ctx.context.convexQueryClient.serverHttpClient?.setAuth(token);
+    }
+    return { isAuthenticated: !!token, token };
+  },
+  component: RootComponent,
 });
+
+function RootComponent() {
+  const context = useRouteContext({ from: Route.id });
+  return (
+    <ConvexBetterAuthProvider
+      client={context.convexQueryClient.convexClient}
+      authClient={authClient}
+      initialToken={context.token}
+    >
+      <RootDocument>
+        <Outlet />
+        <Toaster />
+      </RootDocument>
+    </ConvexBetterAuthProvider>
+  );
+}
+
+function RootDocument({ children }: { children: React.ReactNode }) {
+  return (
+    <html lang="en">
+      <head>
+        <HeadContent />
+      </head>
+      <body className="antialiased">
+        {children}
+        <Scripts />
+      </body>
+    </html>
+  );
+}

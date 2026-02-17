@@ -1,10 +1,10 @@
 import { createFileRoute } from "@tanstack/react-router";
 import BotPage from "@/app/bot/page";
-import { requireServerSession } from "@/lib/route-auth";
+import { requireAuth } from "@/lib/route-auth";
 
 export const Route = createFileRoute("/bot")({
-  beforeLoad: async () => {
-    await requireServerSession();
+  beforeLoad: ({ context }) => {
+    requireAuth(context);
   },
   component: BotPage,
 });

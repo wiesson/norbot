@@ -152,8 +152,8 @@ function LoginRouteView() {
 }
 
 export const Route = createFileRoute("/login")({
-  beforeLoad: async () => {
-    await redirectAuthenticatedToHome();
+  beforeLoad: ({ context }) => {
+    redirectAuthenticatedToHome(context);
   },
   component: LoginRouteView,
 });

@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import WorkspaceProjectPage from "@/app/w/[slug]/p/[projectShortCode]/page";
-import { requireServerSession } from "@/lib/route-auth";
+import { requireAuth } from "@/lib/route-auth";
 
 function WorkspaceProjectRouteComponent() {
   const { slug, projectShortCode } = Route.useParams();
@@ -8,8 +8,8 @@ function WorkspaceProjectRouteComponent() {
 }
 
 export const Route = createFileRoute("/w/$slug/p/$projectShortCode")({
-  beforeLoad: async () => {
-    await requireServerSession();
+  beforeLoad: ({ context }) => {
+    requireAuth(context);
   },
   component: WorkspaceProjectRouteComponent,
 });
