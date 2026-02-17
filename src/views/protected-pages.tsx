@@ -13,7 +13,7 @@ import { cn } from "@/lib/utils";
 import { ArrowLeft } from "lucide-react";
 import { LogoutButton } from "@/components/logout-button";
 import { authClient } from "@/lib/auth-client";
-import LoginPage from "@/app/login/page";
+import LoginPage from "@/views/landing-page";
 
 function FullScreenLoading({ label = "Loading..." }: { label?: string }) {
   return (

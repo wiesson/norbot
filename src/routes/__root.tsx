@@ -13,7 +13,7 @@ import type { QueryClient } from "@tanstack/react-query";
 import { authClient } from "@/lib/auth-client";
 import { getToken } from "@/lib/auth-server";
 import { Toaster } from "@/components/ui/sonner";
-import appCss from "@/app/globals.css?url";
+import appCss from "@/styles/globals.css?url";
 
 const getAuth = createServerFn({ method: "GET" }).handler(async () => {
   return await getToken();
