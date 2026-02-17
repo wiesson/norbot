@@ -9,15 +9,12 @@ import tailwindcss from "@tailwindcss/vite";
 export default defineConfig({
   plugins: [
     devtools(),
-    tanstackStart(),
     nitro(),
     viteTsConfigPaths({
       projects: ["./tsconfig.json"],
     }),
     tailwindcss(),
+    tanstackStart(),
     viteReact(),
   ],
-  ssr: {
-    noExternal: ["@convex-dev/better-auth"],
-  },
 });
