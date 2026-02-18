@@ -10,7 +10,10 @@ import authConfig from "./auth.config";
 
 export const authComponent = createClient<DataModel>(components.betterAuth as any);
 
-const appOrigin = process.env.APP_URL || "http://localhost:3000";
+const appOrigin = process.env.APP_URL;
+if (!appOrigin) {
+  throw new Error("Missing APP_URL environment variable");
+}
 
 function deriveUsernameFromEmail(email: string): string {
   const [local = "user"] = email.toLowerCase().split("@");
