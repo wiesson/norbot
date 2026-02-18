@@ -9,13 +9,7 @@ import tailwindcss from "@tailwindcss/vite";
 export default defineConfig({
   plugins: [
     devtools(),
-    nitro({
-      routeRules: {
-        "/api/auth/**": {
-          proxy: process.env.VITE_CONVEX_SITE_URL + "/api/auth/**",
-        },
-      },
-    }),
+    nitro(),
     viteTsConfigPaths({
       projects: ["./tsconfig.json"],
     }),
