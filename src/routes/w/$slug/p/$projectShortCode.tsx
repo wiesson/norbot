@@ -1,12 +1,23 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { useMemo } from "react";
 import { useQuery } from "convex/react";
 import { api } from "@convex/_generated/api";
+import { useRouter, useRouterState } from "@tanstack/react-router";
+import { KanbanBoard } from "@/components/kanban/kanban-board";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { buttonVariants } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import {
+  Select,
+  SelectTrigger,
+  SelectValue,
+  SelectContent,
+  SelectItem,
+} from "@/components/ui/select";
 import { Card, CardContent } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
-import { Settings, LogOut, ChevronLeft } from "lucide-react";
+import { Settings, LogOut, ChevronLeft, GitBranch } from "lucide-react";
+import type { Id } from "@convex/_generated/dataModel";
 import { requireApprovedUser } from "@/lib/route-auth";
 
 export const Route = createFileRoute("/w/$slug/p/$projectShortCode")({
@@ -19,15 +30,50 @@ export const Route = createFileRoute("/w/$slug/p/$projectShortCode")({
 function ProjectPage() {
   const { slug, projectShortCode } = Route.useParams();
   const { user } = Route.useRouteContext();
+  const router = useRouter();
+  const pathname = useRouterState({ select: (state) => state.location.pathname });
+  const searchStr = useRouterState({ select: (state) => state.location.searchStr });
+  const searchParams = useMemo(() => {
+    const raw = searchStr.startsWith("?") ? searchStr.slice(1) : searchStr;
+    return new URLSearchParams(raw);
+  }, [searchStr]);
+
+  const repoFilter = searchParams.get("repo");
   const isAllProjects = projectShortCode.toLowerCase() === "all";
 
   const workspace = useQuery(api.workspaces.getBySlug, { slug });
+  const repositories = useQuery(
+    api.repositories.list,
+    workspace ? { workspaceId: workspace._id } : "skip"
+  );
+  const projectList = useQuery(
+    api.projects.list,
+    workspace ? { workspaceId: workspace._id } : "skip"
+  );
   const selectedProject = useQuery(
     api.projects.getByShortCode,
     workspace && !isAllProjects
       ? { workspaceId: workspace._id, shortCode: projectShortCode }
       : "skip"
   );
+  const projects = projectList ?? [];
+
+  const selectedRepositoryId =
+    repoFilter && repositories?.some((repo) => repo._id === repoFilter)
+      ? (repoFilter as Id<"repositories">)
+      : undefined;
+
+  const updateRepoFilter = (value: string | null) => {
+    if (value === null) return;
+    const params = new URLSearchParams(searchParams.toString());
+    if (value === "all") {
+      params.delete("repo");
+    } else {
+      params.set("repo", value);
+    }
+    const query = params.toString();
+    router.history.push(query ? `${pathname}?${query}` : pathname);
+  };
 
   if (workspace === undefined || (!isAllProjects && selectedProject === undefined)) {
     return (
@@ -60,10 +106,7 @@ function ProjectPage() {
         <div className="container mx-auto px-4 py-8 max-w-2xl">
           <a
             href={`/w/${slug}`}
-            className={cn(
-              buttonVariants({ variant: "ghost", size: "sm" }),
-              "mb-6"
-            )}
+            className={cn(buttonVariants({ variant: "ghost", size: "sm" }), "mb-6")}
           >
             <ChevronLeft className="mr-2 h-4 w-4" />
             Back to Projects
@@ -72,8 +115,7 @@ function ProjectPage() {
             <CardContent className="py-8 text-center space-y-2">
               <p className="font-medium">Project not found</p>
               <p className="text-sm text-muted-foreground">
-                No project with code <code>{projectShortCode}</code> exists in
-                this workspace.
+                No project with code <code>{projectShortCode}</code> exists in this workspace.
               </p>
             </CardContent>
           </Card>
@@ -89,29 +131,60 @@ function ProjectPage() {
           <div className="flex items-center gap-4">
             <a
               href={`/w/${slug}`}
-              className={cn(
-                buttonVariants({ variant: "ghost", size: "icon" }),
-                "mr-2"
-              )}
+              className={cn(buttonVariants({ variant: "ghost", size: "icon" }), "mr-2")}
             >
               <ChevronLeft className="h-5 w-5" />
             </a>
             <div>
               <h1 className="text-lg font-bold flex items-center gap-2">
                 {workspace.name}
-                <Badge>
-                  {isAllProjects ? "ALL" : selectedProject?.shortCode}
-                </Badge>
+                <Badge>{isAllProjects ? "ALL" : selectedProject?.shortCode}</Badge>
               </h1>
               <p className="text-xs text-muted-foreground">
-                {isAllProjects
-                  ? "All workspace tasks"
-                  : selectedProject?.name}
+                {isAllProjects ? "All workspace tasks" : selectedProject?.name}
               </p>
             </div>
           </div>
 
           <div className="flex items-center gap-4">
+            <div className="hidden lg:flex gap-1">
+              <a href={`/w/${slug}/p/all`} className={buttonVariants({ size: "sm", variant: isAllProjects ? "default" : "outline" })}>
+                All
+              </a>
+              {projects.map((project) => (
+                <a
+                  key={project._id}
+                  href={`/w/${slug}/p/${project.shortCode}`}
+                  className={buttonVariants({
+                    size: "sm",
+                    variant: !isAllProjects && selectedProject?._id === project._id ? "default" : "outline",
+                  })}
+                >
+                  {project.shortCode}
+                </a>
+              ))}
+            </div>
+
+            {repositories && repositories.length > 0 && (
+              <Select
+                value={selectedRepositoryId ?? "all"}
+                onValueChange={updateRepoFilter}
+              >
+                <SelectTrigger className="w-[200px]">
+                  <GitBranch className="size-4 mr-2 text-muted-foreground" />
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All repositories</SelectItem>
+                  {repositories.map((repo) => (
+                    <SelectItem key={repo._id} value={repo._id}>
+                      {repo.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+
             <a
               href={`/w/${slug}/settings`}
               className={cn(buttonVariants({ variant: "ghost", size: "icon" }))}
@@ -139,14 +212,11 @@ function ProjectPage() {
 
       <main className="py-6">
         <div className="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8">
-          <Card>
-            <CardContent className="py-16 text-center space-y-2">
-              <p className="font-medium text-lg">Kanban Board</p>
-              <p className="text-muted-foreground">
-                The kanban board will be implemented in the next phase.
-              </p>
-            </CardContent>
-          </Card>
+          <KanbanBoard
+            workspaceId={workspace._id}
+            repositoryId={selectedRepositoryId}
+            projectId={selectedProject?._id}
+          />
         </div>
       </main>
     </div>
