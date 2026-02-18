@@ -1,24 +1,23 @@
-import { tanstackStart } from "@tanstack/react-start/plugin/vite";
-import { defineConfig } from "vite";
-import viteReact from "@vitejs/plugin-react";
-import { devtools } from "@tanstack/devtools-vite";
-import { nitro } from "nitro/vite";
-import viteTsConfigPaths from "vite-tsconfig-paths";
-import tailwindcss from "@tailwindcss/vite";
+import { defineConfig } from 'vite'
+import { devtools } from '@tanstack/devtools-vite'
+import { tanstackStart } from '@tanstack/react-start/plugin/vite'
+import viteReact from '@vitejs/plugin-react'
+import viteTsConfigPaths from 'vite-tsconfig-paths'
+import tailwindcss from '@tailwindcss/vite'
+import { nitro } from 'nitro/vite'
 
-export default defineConfig({
-  ssr: {
-    // Required by Convex + Better Auth SSR setup to avoid resolution/runtime issues.
-    noExternal: ["@convex-dev/better-auth"],
-  },
+const config = defineConfig({
   plugins: [
     devtools(),
     nitro(),
+    // this is the plugin that enables path aliases
     viteTsConfigPaths({
-      projects: ["./tsconfig.json"],
+      projects: ['./tsconfig.json'],
     }),
     tailwindcss(),
     tanstackStart(),
     viteReact(),
   ],
-});
+})
+
+export default config

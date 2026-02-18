@@ -6,8 +6,9 @@ import {
 } from "@convex-dev/better-auth/client/plugins";
 
 const authBaseUrl =
-  // Prefer same-origin in browser to avoid cross-environment drift.
-  typeof window !== "undefined" ? window.location.origin : import.meta.env.VITE_SITE_URL || import.meta.env.VITE_APP_URL;
+  typeof window !== "undefined"
+    ? window.location.origin
+    : import.meta.env.VITE_SITE_URL || import.meta.env.VITE_APP_URL;
 
 export const authClient = createAuthClient({
   ...(authBaseUrl ? { baseURL: authBaseUrl } : {}),

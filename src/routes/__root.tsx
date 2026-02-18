@@ -13,7 +13,7 @@ import type { QueryClient } from "@tanstack/react-query";
 import { authClient } from "@/lib/auth-client";
 import { getToken } from "@/lib/auth-server";
 import { Toaster } from "@/components/ui/sonner";
-import appCss from "@/styles/globals.css?url";
+import appCss from "@/styles.css?url";
 
 const getAuth = createServerFn({ method: "GET" }).handler(async () => {
   return await getToken();
@@ -22,7 +22,8 @@ const getAuth = createServerFn({ method: "GET" }).handler(async () => {
 export const Route = createRootRouteWithContext<{
   queryClient: QueryClient;
   convexQueryClient: ConvexQueryClient;
-}>()({
+}>()(
+  {
   head: () => ({
     meta: [
       { charSet: "utf-8" },
@@ -43,6 +44,7 @@ export const Route = createRootRouteWithContext<{
     return { isAuthenticated: !!token, token };
   },
   component: RootComponent,
+  shellComponent: RootDocument,
 });
 
 function RootComponent() {
@@ -53,10 +55,8 @@ function RootComponent() {
       authClient={authClient}
       initialToken={context.token}
     >
-      <RootDocument>
-        <Outlet />
-        <Toaster />
-      </RootDocument>
+      <Outlet />
+      <Toaster />
     </ConvexBetterAuthProvider>
   );
 }

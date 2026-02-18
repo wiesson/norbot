@@ -9,35 +9,30 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as WaitingRouteImport } from './routes/waiting'
-import { Route as SetupRouteImport } from './routes/setup'
+import { Route as SignupRouteImport } from './routes/signup'
 import { Route as SettingsRouteImport } from './routes/settings'
+import { Route as OnboardingRouteImport } from './routes/onboarding'
 import { Route as LogoutRouteImport } from './routes/logout'
 import { Route as LoginRouteImport } from './routes/login'
-import { Route as BotRouteImport } from './routes/bot'
-import { Route as AppRouteImport } from './routes/app'
 import { Route as IndexRouteImport } from './routes/index'
-import { Route as WorkspacesNewRouteImport } from './routes/workspaces/new'
-import { Route as InviteTokenRouteImport } from './routes/invite/$token'
 import { Route as WSlugIndexRouteImport } from './routes/w/$slug/index'
 import { Route as WSlugSettingsRouteImport } from './routes/w/$slug/settings'
-import { Route as WSlugInviteRouteImport } from './routes/w/$slug/invite'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
 import { Route as WSlugPProjectShortCodeRouteImport } from './routes/w/$slug/p/$projectShortCode'
 
-const WaitingRoute = WaitingRouteImport.update({
-  id: '/waiting',
-  path: '/waiting',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const SetupRoute = SetupRouteImport.update({
-  id: '/setup',
-  path: '/setup',
+const SignupRoute = SignupRouteImport.update({
+  id: '/signup',
+  path: '/signup',
   getParentRoute: () => rootRouteImport,
 } as any)
 const SettingsRoute = SettingsRouteImport.update({
   id: '/settings',
   path: '/settings',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const OnboardingRoute = OnboardingRouteImport.update({
+  id: '/onboarding',
+  path: '/onboarding',
   getParentRoute: () => rootRouteImport,
 } as any)
 const LogoutRoute = LogoutRouteImport.update({
@@ -50,29 +45,9 @@ const LoginRoute = LoginRouteImport.update({
   path: '/login',
   getParentRoute: () => rootRouteImport,
 } as any)
-const BotRoute = BotRouteImport.update({
-  id: '/bot',
-  path: '/bot',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const AppRoute = AppRouteImport.update({
-  id: '/app',
-  path: '/app',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const WorkspacesNewRoute = WorkspacesNewRouteImport.update({
-  id: '/workspaces/new',
-  path: '/workspaces/new',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const InviteTokenRoute = InviteTokenRouteImport.update({
-  id: '/invite/$token',
-  path: '/invite/$token',
   getParentRoute: () => rootRouteImport,
 } as any)
 const WSlugIndexRoute = WSlugIndexRouteImport.update({
@@ -83,11 +58,6 @@ const WSlugIndexRoute = WSlugIndexRouteImport.update({
 const WSlugSettingsRoute = WSlugSettingsRouteImport.update({
   id: '/w/$slug/settings',
   path: '/w/$slug/settings',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const WSlugInviteRoute = WSlugInviteRouteImport.update({
-  id: '/w/$slug/invite',
-  path: '/w/$slug/invite',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
@@ -103,34 +73,24 @@ const WSlugPProjectShortCodeRoute = WSlugPProjectShortCodeRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
-  '/app': typeof AppRoute
-  '/bot': typeof BotRoute
   '/login': typeof LoginRoute
   '/logout': typeof LogoutRoute
+  '/onboarding': typeof OnboardingRoute
   '/settings': typeof SettingsRoute
-  '/setup': typeof SetupRoute
-  '/waiting': typeof WaitingRoute
-  '/invite/$token': typeof InviteTokenRoute
-  '/workspaces/new': typeof WorkspacesNewRoute
+  '/signup': typeof SignupRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
-  '/w/$slug/invite': typeof WSlugInviteRoute
   '/w/$slug/settings': typeof WSlugSettingsRoute
   '/w/$slug/': typeof WSlugIndexRoute
   '/w/$slug/p/$projectShortCode': typeof WSlugPProjectShortCodeRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
-  '/app': typeof AppRoute
-  '/bot': typeof BotRoute
   '/login': typeof LoginRoute
   '/logout': typeof LogoutRoute
+  '/onboarding': typeof OnboardingRoute
   '/settings': typeof SettingsRoute
-  '/setup': typeof SetupRoute
-  '/waiting': typeof WaitingRoute
-  '/invite/$token': typeof InviteTokenRoute
-  '/workspaces/new': typeof WorkspacesNewRoute
+  '/signup': typeof SignupRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
-  '/w/$slug/invite': typeof WSlugInviteRoute
   '/w/$slug/settings': typeof WSlugSettingsRoute
   '/w/$slug': typeof WSlugIndexRoute
   '/w/$slug/p/$projectShortCode': typeof WSlugPProjectShortCodeRoute
@@ -138,17 +98,12 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
-  '/app': typeof AppRoute
-  '/bot': typeof BotRoute
   '/login': typeof LoginRoute
   '/logout': typeof LogoutRoute
+  '/onboarding': typeof OnboardingRoute
   '/settings': typeof SettingsRoute
-  '/setup': typeof SetupRoute
-  '/waiting': typeof WaitingRoute
-  '/invite/$token': typeof InviteTokenRoute
-  '/workspaces/new': typeof WorkspacesNewRoute
+  '/signup': typeof SignupRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
-  '/w/$slug/invite': typeof WSlugInviteRoute
   '/w/$slug/settings': typeof WSlugSettingsRoute
   '/w/$slug/': typeof WSlugIndexRoute
   '/w/$slug/p/$projectShortCode': typeof WSlugPProjectShortCodeRoute
@@ -157,51 +112,36 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
-    | '/app'
-    | '/bot'
     | '/login'
     | '/logout'
+    | '/onboarding'
     | '/settings'
-    | '/setup'
-    | '/waiting'
-    | '/invite/$token'
-    | '/workspaces/new'
+    | '/signup'
     | '/api/auth/$'
-    | '/w/$slug/invite'
     | '/w/$slug/settings'
     | '/w/$slug/'
     | '/w/$slug/p/$projectShortCode'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
-    | '/app'
-    | '/bot'
     | '/login'
     | '/logout'
+    | '/onboarding'
     | '/settings'
-    | '/setup'
-    | '/waiting'
-    | '/invite/$token'
-    | '/workspaces/new'
+    | '/signup'
     | '/api/auth/$'
-    | '/w/$slug/invite'
     | '/w/$slug/settings'
     | '/w/$slug'
     | '/w/$slug/p/$projectShortCode'
   id:
     | '__root__'
     | '/'
-    | '/app'
-    | '/bot'
     | '/login'
     | '/logout'
+    | '/onboarding'
     | '/settings'
-    | '/setup'
-    | '/waiting'
-    | '/invite/$token'
-    | '/workspaces/new'
+    | '/signup'
     | '/api/auth/$'
-    | '/w/$slug/invite'
     | '/w/$slug/settings'
     | '/w/$slug/'
     | '/w/$slug/p/$projectShortCode'
@@ -209,17 +149,12 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
-  AppRoute: typeof AppRoute
-  BotRoute: typeof BotRoute
   LoginRoute: typeof LoginRoute
   LogoutRoute: typeof LogoutRoute
+  OnboardingRoute: typeof OnboardingRoute
   SettingsRoute: typeof SettingsRoute
-  SetupRoute: typeof SetupRoute
-  WaitingRoute: typeof WaitingRoute
-  InviteTokenRoute: typeof InviteTokenRoute
-  WorkspacesNewRoute: typeof WorkspacesNewRoute
+  SignupRoute: typeof SignupRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
-  WSlugInviteRoute: typeof WSlugInviteRoute
   WSlugSettingsRoute: typeof WSlugSettingsRoute
   WSlugIndexRoute: typeof WSlugIndexRoute
   WSlugPProjectShortCodeRoute: typeof WSlugPProjectShortCodeRoute
@@ -227,18 +162,11 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/waiting': {
-      id: '/waiting'
-      path: '/waiting'
-      fullPath: '/waiting'
-      preLoaderRoute: typeof WaitingRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/setup': {
-      id: '/setup'
-      path: '/setup'
-      fullPath: '/setup'
-      preLoaderRoute: typeof SetupRouteImport
+    '/signup': {
+      id: '/signup'
+      path: '/signup'
+      fullPath: '/signup'
+      preLoaderRoute: typeof SignupRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/settings': {
@@ -246,6 +174,13 @@ declare module '@tanstack/react-router' {
       path: '/settings'
       fullPath: '/settings'
       preLoaderRoute: typeof SettingsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/onboarding': {
+      id: '/onboarding'
+      path: '/onboarding'
+      fullPath: '/onboarding'
+      preLoaderRoute: typeof OnboardingRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/logout': {
@@ -262,39 +197,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LoginRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/bot': {
-      id: '/bot'
-      path: '/bot'
-      fullPath: '/bot'
-      preLoaderRoute: typeof BotRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/': {
       id: '/'
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/app': {
-      id: '/app'
-      path: '/app'
-      fullPath: '/app'
-      preLoaderRoute: typeof AppRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/workspaces/new': {
-      id: '/workspaces/new'
-      path: '/workspaces/new'
-      fullPath: '/workspaces/new'
-      preLoaderRoute: typeof WorkspacesNewRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/invite/$token': {
-      id: '/invite/$token'
-      path: '/invite/$token'
-      fullPath: '/invite/$token'
-      preLoaderRoute: typeof InviteTokenRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/w/$slug/': {
@@ -309,13 +216,6 @@ declare module '@tanstack/react-router' {
       path: '/w/$slug/settings'
       fullPath: '/w/$slug/settings'
       preLoaderRoute: typeof WSlugSettingsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/w/$slug/invite': {
-      id: '/w/$slug/invite'
-      path: '/w/$slug/invite'
-      fullPath: '/w/$slug/invite'
-      preLoaderRoute: typeof WSlugInviteRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/auth/$': {
@@ -337,17 +237,12 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
-  AppRoute: AppRoute,
-  BotRoute: BotRoute,
   LoginRoute: LoginRoute,
   LogoutRoute: LogoutRoute,
+  OnboardingRoute: OnboardingRoute,
   SettingsRoute: SettingsRoute,
-  SetupRoute: SetupRoute,
-  WaitingRoute: WaitingRoute,
-  InviteTokenRoute: InviteTokenRoute,
-  WorkspacesNewRoute: WorkspacesNewRoute,
+  SignupRoute: SignupRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
-  WSlugInviteRoute: WSlugInviteRoute,
   WSlugSettingsRoute: WSlugSettingsRoute,
   WSlugIndexRoute: WSlugIndexRoute,
   WSlugPProjectShortCodeRoute: WSlugPProjectShortCodeRoute,

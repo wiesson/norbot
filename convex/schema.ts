@@ -11,8 +11,8 @@ export default defineSchema({
     slug: v.string(),
 
     // Slack Integration
-    slackTeamId: v.string(),
-    slackTeamName: v.string(),
+    slackTeamId: v.optional(v.string()),
+    slackTeamName: v.optional(v.string()),
     slackBotToken: v.optional(v.string()), // Per-workspace bot token for multi-tenant isolation
     slackBotUserId: v.optional(v.string()),
 
@@ -169,8 +169,8 @@ export default defineSchema({
     avatarUrl: v.optional(v.string()),
 
     // GitHub Identity (primary auth)
-    githubId: v.number(),
-    githubUsername: v.string(),
+    githubId: v.optional(v.number()),
+    githubUsername: v.optional(v.string()),
     githubAccessToken: v.optional(v.string()),
 
     // Slack Identity (linked)

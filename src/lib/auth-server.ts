@@ -10,7 +10,6 @@ export const {
   convexSiteUrl: process.env.VITE_CONVEX_SITE_URL!,
   jwtCache: {
     enabled: true,
-    // Retry once with a freshly fetched token on any Convex call failure.
     isAuthError: () => false,
   },
 });

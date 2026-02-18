@@ -9,13 +9,21 @@ export function requireAuth(context: { isAuthenticated: boolean }) {
   }
 }
 
-export async function redirectAuthenticatedToHome(context: {
-  isAuthenticated: boolean;
-}, redirectTo?: string) {
+export async function redirectAuthenticatedToHome(
+  context: { isAuthenticated: boolean },
+  redirectTo?: string
+) {
   if (context.isAuthenticated) {
     const user = await ensureViewer();
     if (user) {
-      throw redirect({ to: redirectTo || "/app" });
+      if (redirectTo) {
+        throw redirect({ to: redirectTo as any });
+      }
+      if (user.workspaces?.length) {
+        const slug = user.workspaces[0].slug;
+        throw redirect({ to: "/w/$slug", params: { slug } });
+      }
+      throw redirect({ to: "/onboarding" });
     }
   }
 }
@@ -24,20 +32,22 @@ export const getViewer = createServerFn({ method: "GET" }).handler(async () => {
   return await fetchAuthQuery(api.auth.viewer, {});
 });
 
-export const ensureViewer = createServerFn({ method: "GET" }).handler(async () => {
-  const user = await fetchAuthQuery(api.auth.viewer, {});
-  if (user) {
-    return user;
-  }
+export const ensureViewer = createServerFn({ method: "GET" }).handler(
+  async () => {
+    const user = await fetchAuthQuery(api.auth.viewer, {});
+    if (user) {
+      return user;
+    }
 
-  try {
-    await fetchAuthMutation(api.auth.syncUser, {});
-  } catch {
-    return null;
-  }
+    try {
+      await fetchAuthMutation(api.auth.syncUser, {});
+    } catch {
+      return null;
+    }
 
-  return await fetchAuthQuery(api.auth.viewer, {});
-});
+    return await fetchAuthQuery(api.auth.viewer, {});
+  }
+);
 
 export async function requireViewer() {
   const user = await ensureViewer();
@@ -52,5 +62,17 @@ export async function requireAuthWithUser(context: {
 }) {
   requireAuth(context);
   const user = await requireViewer();
+  return { user };
+}
+
+export async function requireApprovedUser(context: {
+  isAuthenticated: boolean;
+}) {
+  const { user } = await requireAuthWithUser(context);
+
+  if (!user.workspaces?.length && !user.isApproved) {
+    throw redirect({ to: "/onboarding" });
+  }
+
   return { user };
 }

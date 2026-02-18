@@ -189,7 +189,7 @@ export const accept = mutation({
       throw new Error("User not found");
     }
 
-    if (user.githubUsername.toLowerCase() !== invitation.githubUsername.toLowerCase()) {
+    if (user.githubUsername?.toLowerCase() !== invitation.githubUsername.toLowerCase()) {
       throw new Error("This invitation was sent to a different GitHub user");
     }
 

@@ -5,7 +5,9 @@ import type { ButtonHTMLAttributes } from "react";
 type LogoutButtonProps = ButtonHTMLAttributes<HTMLButtonElement>;
 
 export function LogoutButton({ onClick, ...props }: LogoutButtonProps) {
-  const handleClick: ButtonHTMLAttributes<HTMLButtonElement>["onClick"] = (event) => {
+  const handleClick: ButtonHTMLAttributes<HTMLButtonElement>["onClick"] = (
+    event
+  ) => {
     onClick?.(event);
     if (event.defaultPrevented) {
       return;

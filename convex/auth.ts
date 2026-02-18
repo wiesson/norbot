@@ -14,26 +14,6 @@ if (!appOrigin) {
   throw new Error("Missing SITE_URL or APP_URL environment variable");
 }
 
-function deriveUsernameFromEmail(email: string): string {
-  const [local = "user"] = email.toLowerCase().split("@");
-  const normalized = local.replace(/[^a-z0-9_-]/g, "-").replace(/-+/g, "-").replace(/^-|-$/g, "");
-  const base = normalized || "user";
-  const hash = Math.abs(
-    Array.from(email).reduce((acc, char) => (acc * 31 + char.charCodeAt(0)) | 0, 0)
-  )
-    .toString(36)
-    .slice(0, 6);
-  return `${base}-${hash}`.slice(0, 39);
-}
-
-function deriveGithubId(email: string): number {
-  let hash = 0;
-  for (const char of email) {
-    hash = (hash * 31 + char.charCodeAt(0)) | 0;
-  }
-  return Math.abs(hash) || 1;
-}
-
 async function getUserWithWorkspaces(
   ctx: { db: any },
   userId: Id<"users">
@@ -102,6 +82,9 @@ export const createAuth = (ctx: GenericCtx<DataModel>) =>
         },
       }),
     ],
+    emailAndPassword: {
+      enabled: true,
+    },
     socialProviders: {
       github: {
         clientId: process.env.GITHUB_CLIENT_ID!,
@@ -150,15 +133,17 @@ export const syncUser = mutation({
       return existing._id;
     }
 
-    const githubUsername = deriveUsernameFromEmail(email);
-    const githubId = deriveGithubId(email);
+    // For new users, only set githubId/githubUsername if available from GitHub OAuth
+    const githubAccount = (authUser as any).accounts?.find(
+      (a: any) => a.providerId === "github"
+    );
 
     return await ctx.db.insert("users", {
       email,
       name,
       avatarUrl,
-      githubId,
-      githubUsername,
+      githubId: githubAccount ? Number(githubAccount.accountId) : undefined,
+      githubUsername: githubAccount?.username ?? undefined,
       preferences: {
         notifications: {
           slackDM: true,
@@ -204,14 +189,15 @@ export const providersStatus = query({
     const google =
       !!process.env.GOOGLE_CLIENT_ID &&
       !!process.env.GOOGLE_CLIENT_SECRET;
-    const magicLink =
+    const ml =
       !!process.env.MAGIC_LINK_FROM_EMAIL &&
       !!process.env.RESEND_API_KEY;
 
     return {
       github,
       google,
-      magicLink,
+      magicLink: ml,
+      password: true,
     };
   },
 });

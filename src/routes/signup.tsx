@@ -20,97 +20,67 @@ const getProviders = createServerFn({ method: "GET" }).handler(async () => {
   return await fetchAuthQuery(api.auth.providersStatus, {});
 });
 
-export const Route = createFileRoute("/login")({
-  validateSearch: (search: Record<string, unknown>) => {
-    const redirectTo =
-      typeof search.redirect === "string" ? search.redirect : undefined;
-    const isSafeRedirect = redirectTo?.startsWith("/")
-      ? redirectTo
-      : undefined;
-    return { redirect: isSafeRedirect };
-  },
-  beforeLoad: async ({ context, search }) => {
-    await redirectAuthenticatedToHome(context, search.redirect);
+export const Route = createFileRoute("/signup")({
+  beforeLoad: async ({ context }) => {
+    await redirectAuthenticatedToHome(context);
   },
   loader: () => getProviders(),
-  component: LoginRouteView,
+  component: SignupRouteView,
 });
 
-function LoginRouteView() {
-  const { redirect: redirectTo } = Route.useSearch();
+function SignupRouteView() {
   const providers = Route.useLoaderData();
+  const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  const handleEmailPasswordSignIn = async (e: FormEvent<HTMLFormElement>) => {
+  const handleSignUp = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
 
-    if (!email.trim() || !password.trim()) {
-      setError("Email and password are required");
+    if (!name.trim() || !email.trim() || !password.trim()) {
+      setError("All fields are required");
+      return;
+    }
+
+    if (password.length < 8) {
+      setError("Password must be at least 8 characters");
       return;
     }
 
     setError(null);
-    setMessage(null);
     setIsLoading(true);
 
     try {
-      const result = await authClient.signIn.email({
+      const result = await authClient.signUp.email({
         email: email.trim(),
         password,
+        name: name.trim(),
       });
       if (result.error) {
-        setError(result.error.message || "Failed to sign in");
+        setError(result.error.message || "Failed to sign up");
         setIsLoading(false);
         return;
       }
-      window.location.href = redirectTo || "/";
+      window.location.href = "/";
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to sign in");
+      setError(err instanceof Error ? err.message : "Failed to sign up");
       setIsLoading(false);
     }
   };
 
   const handleSocialSignIn = async (provider: "github" | "google") => {
     setError(null);
-    setMessage(null);
     setIsLoading(true);
 
     try {
       await authClient.signIn.social({
         provider,
-        callbackURL: redirectTo || "/",
+        callbackURL: "/",
       });
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to start sign-in");
-      setIsLoading(false);
-    }
-  };
-
-  const handleMagicLink = async () => {
-    if (!email.trim()) {
-      setError("Email is required");
-      return;
-    }
-
-    setError(null);
-    setMessage(null);
-    setIsLoading(true);
-
-    try {
-      await (authClient.signIn as any).magicLink({
-        email: email.trim(),
-        callbackURL: redirectTo || "/",
-      });
-      setMessage("Magic link sent. Check your inbox.");
-    } catch (err) {
-      setError(
-        err instanceof Error ? err.message : "Failed to send magic link"
-      );
-    } finally {
+      setError(err instanceof Error ? err.message : "Failed to start sign-up");
       setIsLoading(false);
     }
   };
@@ -119,9 +89,9 @@ function LoginRouteView() {
     <div className="min-h-screen bg-neutral-50 dark:bg-neutral-950 flex items-center justify-center p-4">
       <Card className="w-full max-w-md">
         <CardHeader>
-          <CardTitle>Sign in to Norbot</CardTitle>
+          <CardTitle>Create an account</CardTitle>
           <CardDescription>
-            Sign in to your account to continue.
+            Sign up for Norbot to get started.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -160,11 +130,22 @@ function LoginRouteView() {
           )}
 
           {providers?.password && (
-            <form onSubmit={handleEmailPasswordSignIn} className="space-y-3">
+            <form onSubmit={handleSignUp} className="space-y-3">
               <div>
-                <Label htmlFor="login-email">Email</Label>
+                <Label htmlFor="signup-name">Name</Label>
                 <Input
-                  id="login-email"
+                  id="signup-name"
+                  type="text"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder="Your name"
+                  autoComplete="name"
+                />
+              </div>
+              <div>
+                <Label htmlFor="signup-email">Email</Label>
+                <Input
+                  id="signup-email"
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
@@ -173,14 +154,14 @@ function LoginRouteView() {
                 />
               </div>
               <div>
-                <Label htmlFor="login-password">Password</Label>
+                <Label htmlFor="signup-password">Password</Label>
                 <Input
-                  id="login-password"
+                  id="signup-password"
                   type="password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  placeholder="Your password"
-                  autoComplete="current-password"
+                  placeholder="At least 8 characters"
+                  autoComplete="new-password"
                 />
               </div>
               <Button
@@ -188,31 +169,18 @@ function LoginRouteView() {
                 className="w-full"
                 disabled={isLoading}
               >
-                Sign In
+                Create Account
               </Button>
             </form>
           )}
 
-          {providers?.magicLink && (
-            <Button
-              type="button"
-              variant="secondary"
-              className="w-full"
-              disabled={isLoading || !email.trim()}
-              onClick={handleMagicLink}
-            >
-              Send Magic Link
-            </Button>
-          )}
-
           <div className="text-center text-sm text-muted-foreground">
-            Don&apos;t have an account?{" "}
-            <a href="/signup" className="text-primary hover:underline">
-              Sign up
+            Already have an account?{" "}
+            <a href="/login" className="text-primary hover:underline">
+              Sign in
             </a>
           </div>
 
-          {message && <p className="text-sm text-emerald-600">{message}</p>}
           {error && <p className="text-sm text-destructive">{error}</p>}
         </CardContent>
       </Card>

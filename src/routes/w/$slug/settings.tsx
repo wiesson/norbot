@@ -1,55 +1,17 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useState } from "react";
-import { useQuery, useMutation, useAction } from "convex/react";
+import { useQuery } from "convex/react";
 import { api } from "@convex/_generated/api";
-import { useRouter } from "@tanstack/react-router";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button, buttonVariants } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Switch } from "@/components/ui/switch";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from "@/components/ui/alert-dialog";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
-import { ArrowLeft, Slack, Trash2, UserMinus, Lock, Globe, Plus, FolderGit2, UserPlus, Hash, Key } from "lucide-react";
-import { ApiKeysSection } from "@/components/settings/api-keys-section";
-import type { Doc, Id } from "@convex/_generated/dataModel";
-import { RepoSelector, type Repo } from "@/components/repo-selector";
-import { requireAuthWithUser, getViewer } from "@/lib/route-auth";
-
-type Priority = "critical" | "high" | "medium" | "low";
-type Role = "admin" | "member" | "viewer";
+import { ChevronLeft, LogOut, UserPlus } from "lucide-react";
+import { requireApprovedUser } from "@/lib/route-auth";
 
 export const Route = createFileRoute("/w/$slug/settings")({
   beforeLoad: async ({ context }) => {
-    return await requireAuthWithUser(context);
+    return await requireApprovedUser(context);
   },
   component: WorkspaceSettingsPage,
 });
@@ -57,7 +19,12 @@ export const Route = createFileRoute("/w/$slug/settings")({
 function WorkspaceSettingsPage() {
   const { slug } = Route.useParams();
   const { user } = Route.useRouteContext();
+
   const workspace = useQuery(api.workspaces.getBySlug, { slug });
+  const members = useQuery(
+    api.workspaces.getMembers,
+    workspace ? { workspaceId: workspace._id } : "skip"
+  );
 
   if (workspace === undefined) {
     return (
@@ -75,808 +42,131 @@ function WorkspaceSettingsPage() {
     );
   }
 
-  return (
-    <WorkspaceSettingsForm
-      key={workspace._id}
-      workspace={workspace}
-      user={user}
-      slug={slug}
-    />
-  );
-}
-
-type AuthUser = NonNullable<Awaited<ReturnType<typeof getViewer>>>;
-
-function WorkspaceSettingsForm({
-  workspace: initialWorkspace,
-  user,
-  slug,
-}: {
-  workspace: Doc<"workspaces">;
-  user: AuthUser;
-  slug: string;
-}) {
-  const router = useRouter();
-
-  // Form state initialized from workspace props (key-based remount handles workspace changes)
-  const [workspaceName, setWorkspaceName] = useState(initialWorkspace.name);
-  const [aiExtractionEnabled, setAiExtractionEnabled] = useState(
-    initialWorkspace.settings?.aiExtractionEnabled ?? true
-  );
-  const [defaultPriority, setDefaultPriority] = useState<Priority | "">(
-    initialWorkspace.settings?.defaultTaskPriority ?? ""
-  );
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-
-  // Repository state
-  const [addRepoDialogOpen, setAddRepoDialogOpen] = useState(false);
-  const [availableRepos, setAvailableRepos] = useState<Repo[]>([]);
-  const [isLoadingRepos, setIsLoadingRepos] = useState(false);
-  const [selectedRepoIds, setSelectedRepoIds] = useState<Set<number>>(new Set());
-
-  // Channel state
-  const [addChannelDialogOpen, setAddChannelDialogOpen] = useState(false);
-  const [availableChannels, setAvailableChannels] = useState<Array<{
-    id: string;
-    name: string;
-    isPrivate: boolean;
-    numMembers: number;
-    topic: string;
-  }>>([]);
-  const [isLoadingChannels, setIsLoadingChannels] = useState(false);
-  const [selectedChannelId, setSelectedChannelId] = useState<string | null>(null);
-
-  // Queries (workspace._id is stable within this component instance due to key-based remount)
-  const workspace = useQuery(api.workspaces.getBySlug, { slug }) ?? initialWorkspace;
-  const members = useQuery(
-    api.workspaces.getMembers,
-    { workspaceId: workspace._id }
-  );
-  const userMembership = useQuery(
-    api.workspaces.getUserMembership,
-    { workspaceId: workspace._id, userId: user._id }
-  );
-  const repositories = useQuery(
-    api.repositories.list,
-    { workspaceId: workspace._id }
-  );
-  const channelMappings = useQuery(
-    api.channelMappings.list,
-    { workspaceId: workspace._id }
-  );
-
-  // Mutations
-  const updateWorkspace = useMutation(api.workspaces.update);
-  const updateMemberRole = useMutation(api.workspaces.updateMemberRole);
-  const removeMember = useMutation(api.workspaces.removeMember);
-  const deleteWorkspace = useMutation(api.workspaces.deleteWorkspace);
-  const updateRepository = useMutation(api.repositories.update);
-  const removeRepository = useMutation(api.repositories.remove);
-  const connectRepos = useMutation(api.github.connectRepos);
-  const updateChannelMapping = useMutation(api.channelMappings.update);
-  const createChannelMapping = useMutation(api.channelMappings.create);
-  const removeChannelMapping = useMutation(api.channelMappings.remove);
-  const resetOnboarding = useMutation(api.users.resetOnboarding);
-
-  // Actions
-  const listUserRepos = useAction(api.github.listUserRepos);
-  const getAvailableChannels = useAction(api.slack.getAvailableChannels);
-
-  // Derived state
-  const isAdmin = userMembership?.role === "admin";
-  const validMembers = members?.filter((m): m is NonNullable<typeof m> => m !== null) ?? [];
-  const adminCount = validMembers.filter((m) => m.role === "admin").length;
-
-  // Handlers
-  const handleNameBlur = async () => {
-    if (workspace && workspaceName !== workspace.name && workspaceName.trim()) {
-      await updateWorkspace({
-        id: workspace._id,
-        name: workspaceName.trim(),
-      });
-    }
-  };
-
-  const handleAiExtractionChange = async (checked: boolean) => {
-    setAiExtractionEnabled(checked);
-    if (workspace) {
-      await updateWorkspace({
-        id: workspace._id,
-        settings: {
-          aiExtractionEnabled: checked,
-          defaultTaskPriority: defaultPriority || undefined,
-        },
-      });
-    }
-  };
-
-  const handlePriorityChange = async (value: string | null) => {
-    if (value === null) return;
-    const priority = value as Priority | "";
-    setDefaultPriority(priority);
-    if (workspace) {
-      await updateWorkspace({
-        id: workspace._id,
-        settings: {
-          aiExtractionEnabled,
-          defaultTaskPriority: priority || undefined,
-        },
-      });
-    }
-  };
-
-  const handleRoleChange = async (userId: Id<"users">, role: Role) => {
-    if (workspace) {
-      await updateMemberRole({
-        workspaceId: workspace._id,
-        userId,
-        role,
-      });
-    }
-  };
-
-  const handleRemoveMember = async (userId: Id<"users">) => {
-    if (workspace) {
-      await removeMember({
-        workspaceId: workspace._id,
-        userId,
-      });
-    }
-  };
-
-  const handleDeleteWorkspace = async () => {
-    if (workspace) {
-      await deleteWorkspace({ id: workspace._id });
-      router.history.push("/app");
-    }
-  };
-
-  const handleRestartSetup = async () => {
-    if (user) {
-      await resetOnboarding({ userId: user._id });
-      router.history.push("/setup");
-    }
-  };
-
-  // Repository handlers
-  const handleOpenAddRepoDialog = async () => {
-    if (!user) return;
-    setAddRepoDialogOpen(true);
-    setIsLoadingRepos(true);
-    setSelectedRepoIds(new Set());
-    try {
-      const repos = await listUserRepos({ userId: user._id });
-      setAvailableRepos(repos);
-    } catch (error) {
-      console.error("Error fetching repos:", error);
-      setAvailableRepos([]);
-    } finally {
-      setIsLoadingRepos(false);
-    }
-  };
-
-  const handleToggleRepo = (id: number) => {
-    const newSelected = new Set(selectedRepoIds);
-    if (newSelected.has(id)) {
-      newSelected.delete(id);
-    } else {
-      newSelected.add(id);
-    }
-    setSelectedRepoIds(newSelected);
-  };
-
-  const handleConnectRepos = async () => {
-    if (!workspace) return;
-    const selectedRepos = availableRepos
-      .filter((r) => selectedRepoIds.has(r.githubId))
-      .map((r) => ({
-        githubId: r.githubId,
-        githubNodeId: r.githubNodeId,
-        name: r.name,
-        fullName: r.fullName,
-        cloneUrl: r.cloneUrl,
-        defaultBranch: r.defaultBranch,
-      }));
-    if (selectedRepos.length > 0) {
-      await connectRepos({ workspaceId: workspace._id, repos: selectedRepos });
-    }
-    setAddRepoDialogOpen(false);
-    setSelectedRepoIds(new Set());
-  };
-
-  const handleUpdateRepoSettings = async (
-    repoId: Id<"repositories">,
-    settings: {
-      claudeCodeEnabled: boolean;
-      autoCreateBranches: boolean;
-      branchPrefix?: string;
-    }
-  ) => {
-    await updateRepository({ id: repoId, settings });
-  };
-
-  const handleRemoveRepository = async (repoId: Id<"repositories">) => {
-    await removeRepository({ id: repoId });
-  };
-
-  const handleChannelRepoChange = async (
-    mappingId: Id<"channelMappings">,
-    repoId: string
-  ) => {
-    await updateChannelMapping({
-      id: mappingId,
-      repositoryId: repoId === "none" ? undefined : (repoId as Id<"repositories">),
-    });
-  };
-
-  // Channel handlers
-  const handleOpenAddChannelDialog = async () => {
-    if (!workspace) return;
-    setAddChannelDialogOpen(true);
-    setIsLoadingChannels(true);
-    setSelectedChannelId(null);
-    try {
-      const channels = await getAvailableChannels({ workspaceId: workspace._id });
-      // Filter out channels that are already configured
-      const configuredChannelIds = new Set(channelMappings?.map((m) => m.slackChannelId) ?? []);
-      const unconfiguredChannels = channels.filter((ch) => !configuredChannelIds.has(ch.id));
-      setAvailableChannels(unconfiguredChannels);
-    } catch (error) {
-      console.error("Error fetching channels:", error);
-      setAvailableChannels([]);
-    } finally {
-      setIsLoadingChannels(false);
-    }
-  };
-
-  const handleAddChannel = async () => {
-    if (!workspace || !selectedChannelId) return;
-    const channel = availableChannels.find((ch) => ch.id === selectedChannelId);
-    if (!channel) return;
-
-    await createChannelMapping({
-      workspaceId: workspace._id,
-      slackChannelId: channel.id,
-      slackChannelName: channel.name,
-    });
-
-    setAddChannelDialogOpen(false);
-    setSelectedChannelId(null);
-  };
-
-  const handleRemoveChannel = async (mappingId: Id<"channelMappings">) => {
-    await removeChannelMapping({ id: mappingId });
-  };
+  const currentMembership = members?.find((m: any) => m.userId === user._id);
+  const isAdmin = currentMembership?.role === "admin";
 
   return (
     <div className="min-h-screen bg-neutral-50 dark:bg-neutral-950">
-      <div className="container mx-auto px-4 py-8 max-w-2xl">
-        <a
-          href={`/w/${slug}`}
-          className={cn(buttonVariants({ variant: "ghost", size: "sm" }), "mb-6")}
-        >
-          <ArrowLeft className="mr-2 h-4 w-4" />
-          Back to Workspace
-        </a>
-
-        <h1 className="text-2xl font-bold mb-6">Workspace Settings</h1>
-
-        {/* General Section */}
-        <Card className="mb-6">
-          <CardHeader>
-            <CardTitle>General</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="workspace-name">Workspace Name</Label>
-              <Input
-                id="workspace-name"
-                value={workspaceName}
-                onChange={(e) => setWorkspaceName(e.target.value)}
-                onBlur={handleNameBlur}
-                placeholder="Workspace name"
-              />
+      <header className="border-b bg-white dark:bg-neutral-900 sticky top-0 z-10">
+        <div className="container mx-auto px-4 py-3 flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <a
+              href={`/w/${slug}`}
+              className={cn(
+                buttonVariants({ variant: "ghost", size: "icon" }),
+                "mr-2"
+              )}
+            >
+              <ChevronLeft className="h-5 w-5" />
+            </a>
+            <div>
+              <h1 className="text-lg font-bold">
+                {workspace.name} - Settings
+              </h1>
+              <p className="text-xs text-muted-foreground">/{workspace.slug}</p>
             </div>
+          </div>
+          <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2">
+              <Avatar className="h-8 w-8">
+                <AvatarImage src={user.avatarUrl} alt={user.name} />
+                <AvatarFallback>{user.name[0]}</AvatarFallback>
+              </Avatar>
+              <span className="text-sm font-medium hidden sm:inline">
+                {user.name}
+              </span>
+            </div>
+            <a
+              href="/logout"
+              className={cn(buttonVariants({ variant: "ghost", size: "icon" }))}
+            >
+              <LogOut className="h-5 w-5" />
+            </a>
+          </div>
+        </div>
+      </header>
 
-            <div className="space-y-2">
-              <Label>Slack Team</Label>
-              <div className="flex items-center gap-2">
-                <Badge variant="secondary">
-                  <Slack className="h-3 w-3 mr-1" />
-                  {workspace.slackTeamName}
-                </Badge>
+      <main className="py-6">
+        <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
+          {/* General */}
+          <Card>
+            <CardHeader>
+              <CardTitle>General</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div>
+                <p className="text-sm font-medium">Name</p>
+                <p className="text-muted-foreground">{workspace.name}</p>
               </div>
-            </div>
-
-            <div className="space-y-2">
-              <Label>Created</Label>
-              <p className="text-sm text-muted-foreground">
-                {new Date(workspace.createdAt).toLocaleDateString("en-US", {
-                  year: "numeric",
-                  month: "long",
-                  day: "numeric",
-                })}
-              </p>
-            </div>
-
-            <div className="pt-4 border-t">
-              <Button variant="outline" onClick={handleRestartSetup}>
-                Restart Setup Wizard
-              </Button>
-              <p className="text-sm text-muted-foreground mt-1">
-                Re-run the onboarding setup to reconfigure Slack and GitHub
-              </p>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Settings Section */}
-        <Card className="mb-6">
-          <CardHeader>
-            <CardTitle>Settings</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            <div className="flex items-center justify-between">
-              <div className="space-y-0.5">
-                <Label>AI Extraction</Label>
-                <p className="text-sm text-muted-foreground">
-                  Automatically extract task details from Slack messages
-                </p>
+              <div>
+                <p className="text-sm font-medium">Slug</p>
+                <p className="text-muted-foreground">/{workspace.slug}</p>
               </div>
-              <Switch
-                checked={aiExtractionEnabled}
-                onCheckedChange={handleAiExtractionChange}
-              />
-            </div>
+              {workspace.slackTeamName && (
+                <div>
+                  <p className="text-sm font-medium">Slack Team</p>
+                  <p className="text-muted-foreground">
+                    {workspace.slackTeamName}
+                  </p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
 
-            <div className="space-y-2">
-              <Label>Default Task Priority</Label>
-              <Select
-                value={defaultPriority || null}
-                onValueChange={handlePriorityChange}
-              >
-                <SelectTrigger className="w-[200px]">
-                  <SelectValue>
-                    {defaultPriority
-                      ? defaultPriority.charAt(0).toUpperCase() + defaultPriority.slice(1)
-                      : "Select priority"}
-                  </SelectValue>
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="critical">Critical</SelectItem>
-                  <SelectItem value="high">High</SelectItem>
-                  <SelectItem value="medium">Medium</SelectItem>
-                  <SelectItem value="low">Low</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Slack Channels Section */}
-        <Card className="mb-6">
-          <CardHeader className="flex flex-row items-center justify-between">
-            <CardTitle>Slack Channels</CardTitle>
-            <Dialog open={addChannelDialogOpen} onOpenChange={setAddChannelDialogOpen}>
-              <DialogTrigger
-                render={<Button variant="outline" size="sm" onClick={handleOpenAddChannelDialog} />}
-              >
-                <Plus className="h-4 w-4 mr-2" />
-                Add Channel
-              </DialogTrigger>
-              <DialogContent>
-                <DialogHeader>
-                  <DialogTitle>Add Slack Channel</DialogTitle>
-                  <DialogDescription>
-                    Select a Slack channel to configure for task tracking
-                  </DialogDescription>
-                </DialogHeader>
-                {isLoadingChannels ? (
-                  <div className="py-8 text-center text-muted-foreground">
-                    Loading channels...
-                  </div>
-                ) : availableChannels.length === 0 ? (
-                  <div className="py-8 text-center text-muted-foreground">
-                    <p>No additional channels available.</p>
-                    <p className="text-sm mt-1">
-                      Make sure the Norbot app is invited to the channels you want to use.
-                    </p>
-                  </div>
-                ) : (
-                  <div className="space-y-2 max-h-[300px] overflow-y-auto">
-                    {availableChannels.map((channel) => (
-                      <div
-                        key={channel.id}
-                        onClick={() => setSelectedChannelId(channel.id)}
-                        className={cn(
-                          "flex items-center gap-2 p-3 rounded-lg border cursor-pointer transition-colors",
-                          selectedChannelId === channel.id
-                            ? "border-primary bg-primary/5"
-                            : "border-border hover:bg-muted/50"
-                        )}
-                      >
-                        <Hash className="h-4 w-4 text-muted-foreground" />
-                        <div className="flex-1">
-                          <span className="font-medium">{channel.name}</span>
-                          {channel.isPrivate && (
-                            <Lock className="h-3 w-3 inline ml-1 text-muted-foreground" />
-                          )}
-                        </div>
-                        <span className="text-xs text-muted-foreground">
-                          {channel.numMembers} members
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                )}
-                <DialogFooter>
-                  <Button
-                    onClick={handleAddChannel}
-                    disabled={!selectedChannelId}
-                  >
-                    Add Channel
+          {/* Members */}
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between">
+              <CardTitle>Members</CardTitle>
+              {isAdmin && (
+                <a href={`/w/${slug}/invite`}>
+                  <Button variant="outline" size="sm">
+                    <UserPlus className="h-4 w-4 mr-2" />
+                    Invite
                   </Button>
-                </DialogFooter>
-              </DialogContent>
-            </Dialog>
-          </CardHeader>
-          <CardContent>
-            {channelMappings && channelMappings.length > 0 ? (
-              <div className="space-y-3">
-                {channelMappings.map((mapping) => (
+                </a>
+              )}
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                {members?.map((member: any) => (
                   <div
-                    key={mapping._id}
-                    className="flex items-center justify-between"
-                  >
-                    <div className="flex items-center gap-2">
-                      <Hash className="h-4 w-4 text-muted-foreground" />
-                      <span>{mapping.slackChannelName}</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Select
-                        value={mapping.repositoryId ?? "none"}
-                        onValueChange={(value) => {
-                          if (value) handleChannelRepoChange(mapping._id, value);
-                        }}
-                      >
-                        <SelectTrigger className="w-[200px]">
-                          <SelectValue>
-                            {mapping.repository?.fullName ?? "No repository"}
-                          </SelectValue>
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="none">No repository</SelectItem>
-                          {repositories?.map((repo) => (
-                            <SelectItem key={repo._id} value={repo._id}>
-                              {repo.fullName}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <AlertDialog>
-                        <AlertDialogTrigger
-                          render={<Button variant="ghost" size="icon-sm" />}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </AlertDialogTrigger>
-                        <AlertDialogContent>
-                          <AlertDialogHeader>
-                            <AlertDialogTitle>Remove channel?</AlertDialogTitle>
-                            <AlertDialogDescription>
-                              Are you sure you want to remove #{mapping.slackChannelName} from task tracking?
-                              This will not affect the Slack channel itself.
-                            </AlertDialogDescription>
-                          </AlertDialogHeader>
-                          <AlertDialogFooter>
-                            <AlertDialogCancel>Cancel</AlertDialogCancel>
-                            <AlertDialogAction
-                              onClick={() => handleRemoveChannel(mapping._id)}
-                            >
-                              Remove
-                            </AlertDialogAction>
-                          </AlertDialogFooter>
-                        </AlertDialogContent>
-                      </AlertDialog>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="text-center py-8 text-muted-foreground">
-                <Hash className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                <p>No Slack channels configured</p>
-                <p className="text-sm">Add a channel to start tracking tasks from Slack</p>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Members Section */}
-        <Card className="mb-6">
-          <CardHeader className="flex flex-row items-center justify-between">
-            <CardTitle>Members</CardTitle>
-            {isAdmin && (
-              <a href={`/w/${slug}/invite`}>
-                <Button variant="outline" size="sm">
-                  <UserPlus className="h-4 w-4 mr-2" />
-                  Invite
-                </Button>
-              </a>
-            )}
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              {validMembers.map((member) => {
-                const isCurrentUser = member.userId === user._id;
-                const isLastAdmin = member.role === "admin" && adminCount === 1;
-                const canChangeRole = isAdmin && !isCurrentUser && !isLastAdmin;
-                const canRemove = isAdmin && !isCurrentUser && !isLastAdmin;
-
-                return (
-                  <div
-                    key={member.membershipId}
+                    key={member.membershipId ?? member.userId}
                     className="flex items-center justify-between"
                   >
                     <div className="flex items-center gap-3">
                       <Avatar className="h-10 w-10">
-                        <AvatarImage src={member.avatarUrl ?? undefined} alt={member.name} />
-                        <AvatarFallback>{member.name?.[0] ?? "?"}</AvatarFallback>
+                        <AvatarImage
+                          src={member.avatarUrl ?? undefined}
+                          alt={member.name}
+                        />
+                        <AvatarFallback>
+                          {member.name?.[0] ?? "?"}
+                        </AvatarFallback>
                       </Avatar>
                       <div>
                         <p className="font-medium">
                           {member.name}
-                          {isCurrentUser && (
-                            <span className="text-muted-foreground ml-1">(you)</span>
+                          {member.userId === user._id && (
+                            <span className="text-muted-foreground ml-1">
+                              (you)
+                            </span>
                           )}
                         </p>
-                        <p className="text-sm text-muted-foreground">{member.email}</p>
+                        <p className="text-sm text-muted-foreground">
+                          {member.email}
+                        </p>
                       </div>
                     </div>
-
-                    <div className="flex items-center gap-2">
-                      {canChangeRole ? (
-                        <Select
-                          value={member.role}
-                          onValueChange={(value) => {
-                            if (value) handleRoleChange(member.userId, value as Role);
-                          }}
-                        >
-                          <SelectTrigger className="w-[120px]" size="sm">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="admin">Admin</SelectItem>
-                            <SelectItem value="member">Member</SelectItem>
-                            <SelectItem value="viewer">Viewer</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      ) : (
-                        <Badge variant="secondary" className="capitalize">
-                          {member.role}
-                        </Badge>
-                      )}
-
-                      {canRemove && (
-                        <AlertDialog>
-                          <AlertDialogTrigger
-                            render={<Button variant="ghost" size="icon-sm" />}
-                          >
-                            <UserMinus className="h-4 w-4" />
-                          </AlertDialogTrigger>
-                          <AlertDialogContent>
-                            <AlertDialogHeader>
-                              <AlertDialogTitle>Remove member?</AlertDialogTitle>
-                              <AlertDialogDescription>
-                                Are you sure you want to remove {member.name} from this
-                                workspace? They will lose access to all tasks and data.
-                              </AlertDialogDescription>
-                            </AlertDialogHeader>
-                            <AlertDialogFooter>
-                              <AlertDialogCancel>Cancel</AlertDialogCancel>
-                              <AlertDialogAction
-                                onClick={() => handleRemoveMember(member.userId)}
-                              >
-                                Remove
-                              </AlertDialogAction>
-                            </AlertDialogFooter>
-                          </AlertDialogContent>
-                        </AlertDialog>
-                      )}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Repositories Section */}
-        <Card className="mb-6">
-          <CardHeader>
-            <CardTitle>Repositories</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {repositories && repositories.length > 0 ? (
-              <div className="space-y-4">
-                {repositories.map((repo) => (
-                  <div
-                    key={repo._id}
-                    className="flex flex-col gap-4 p-4 rounded-lg border border-border"
-                  >
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <FolderGit2 className="h-4 w-4 text-muted-foreground" />
-                        <span className="font-medium">{repo.fullName}</span>
-                        {repo.githubId && (
-                          <span className="text-muted-foreground">
-                          </span>
-                        )}
-                      </div>
-                      <AlertDialog>
-                        <AlertDialogTrigger
-                          render={<Button variant="ghost" size="icon-sm" />}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </AlertDialogTrigger>
-                        <AlertDialogContent>
-                          <AlertDialogHeader>
-                            <AlertDialogTitle>Remove repository?</AlertDialogTitle>
-                            <AlertDialogDescription>
-                              Are you sure you want to remove {repo.fullName} from this
-                              workspace? This will not delete the repository from GitHub.
-                            </AlertDialogDescription>
-                          </AlertDialogHeader>
-                          <AlertDialogFooter>
-                            <AlertDialogCancel>Cancel</AlertDialogCancel>
-                            <AlertDialogAction
-                              onClick={() => handleRemoveRepository(repo._id)}
-                            >
-                              Remove
-                            </AlertDialogAction>
-                          </AlertDialogFooter>
-                        </AlertDialogContent>
-                      </AlertDialog>
-                    </div>
-
-                    <div className="grid gap-4 sm:grid-cols-2">
-                      <div className="flex items-center justify-between">
-                        <Label className="text-sm">Claude Code enabled</Label>
-                        <Switch
-                          checked={repo.settings?.claudeCodeEnabled ?? true}
-                          onCheckedChange={(checked) =>
-                            handleUpdateRepoSettings(repo._id, {
-                              claudeCodeEnabled: checked,
-                              autoCreateBranches: repo.settings?.autoCreateBranches ?? true,
-                              branchPrefix: repo.settings?.branchPrefix,
-                            })
-                          }
-                        />
-                      </div>
-                      <div className="flex items-center justify-between">
-                        <Label className="text-sm">Auto-create branches</Label>
-                        <Switch
-                          checked={repo.settings?.autoCreateBranches ?? true}
-                          onCheckedChange={(checked) =>
-                            handleUpdateRepoSettings(repo._id, {
-                              claudeCodeEnabled: repo.settings?.claudeCodeEnabled ?? true,
-                              autoCreateBranches: checked,
-                              branchPrefix: repo.settings?.branchPrefix,
-                            })
-                          }
-                        />
-                      </div>
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label className="text-sm">Branch prefix</Label>
-                      <Input
-                        placeholder="e.g., feature/"
-                        value={repo.settings?.branchPrefix ?? ""}
-                        onChange={(e) =>
-                          handleUpdateRepoSettings(repo._id, {
-                            claudeCodeEnabled: repo.settings?.claudeCodeEnabled ?? true,
-                            autoCreateBranches: repo.settings?.autoCreateBranches ?? true,
-                            branchPrefix: e.target.value || undefined,
-                          })
-                        }
-                        className="max-w-[200px]"
-                      />
-                    </div>
+                    <Badge variant="secondary" className="capitalize">
+                      {member.role}
+                    </Badge>
                   </div>
                 ))}
               </div>
-            ) : (
-              <div className="text-center py-8 text-muted-foreground">
-                <FolderGit2 className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                <p>No repositories connected</p>
-                <p className="text-sm">Connect a GitHub repository to get started</p>
-              </div>
-            )}
-
-            <Dialog open={addRepoDialogOpen} onOpenChange={setAddRepoDialogOpen}>
-              <DialogTrigger
-                render={<Button variant="outline" onClick={handleOpenAddRepoDialog} />}
-              >
-                <Plus className="h-4 w-4 mr-2" />
-                Add Repository
-              </DialogTrigger>
-              <DialogContent>
-                <DialogHeader>
-                  <DialogTitle>Add Repository</DialogTitle>
-                  <DialogDescription>
-                    Select GitHub repositories to connect to this workspace
-                  </DialogDescription>
-                </DialogHeader>
-                <RepoSelector
-                  repos={availableRepos}
-                  selectedIds={selectedRepoIds}
-                  onToggle={handleToggleRepo}
-                  alreadyConnectedIds={
-                    new Set(repositories?.map((r) => r.githubId) ?? [])
-                  }
-                  isLoading={isLoadingRepos}
-                />
-                <DialogFooter>
-                  <Button
-                    onClick={handleConnectRepos}
-                    disabled={selectedRepoIds.size === 0}
-                  >
-                    {selectedRepoIds.size > 0
-                      ? `Connect (${selectedRepoIds.size})`
-                      : "Connect"}
-                  </Button>
-                </DialogFooter>
-              </DialogContent>
-            </Dialog>
-          </CardContent>
-        </Card>
-
-        {/* API Keys Section */}
-        <ApiKeysSection workspaceId={workspace._id} />
-
-        {/* Danger Zone */}
-        {isAdmin && (
-          <Card className="border-destructive/50">
-            <CardHeader>
-              <CardTitle className="text-destructive">Danger Zone</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="font-medium">Delete Workspace</p>
-                  <p className="text-sm text-muted-foreground">
-                    Permanently delete this workspace and all its data
-                  </p>
-                </div>
-                <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-                  <AlertDialogTrigger render={<Button variant="destructive" />}>
-                    <Trash2 className="h-4 w-4 mr-2" />
-                    Delete
-                  </AlertDialogTrigger>
-                  <AlertDialogContent>
-                    <AlertDialogHeader>
-                      <AlertDialogTitle>Delete "{workspace.name}"?</AlertDialogTitle>
-                      <AlertDialogDescription>
-                        This will permanently delete this workspace, including all tasks,
-                        repositories, and channel mappings. This action cannot be undone.
-                      </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                      <AlertDialogCancel>Cancel</AlertDialogCancel>
-                      <AlertDialogAction
-                        onClick={handleDeleteWorkspace}
-                        className={buttonVariants({ variant: "destructive" })}
-                      >
-                        Delete Workspace
-                      </AlertDialogAction>
-                    </AlertDialogFooter>
-                  </AlertDialogContent>
-                </AlertDialog>
-              </div>
             </CardContent>
           </Card>
-        )}
-      </div>
+        </div>
+      </main>
     </div>
   );
 }
