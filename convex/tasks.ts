@@ -83,17 +83,18 @@ export const getKanban = query({
         .collect();
     }
 
-    // Enrich tasks with project shortCode
-    const enrichedTasks = await Promise.all(
-      tasks.map(async (task) => {
-        let projectShortCode: string | undefined;
-        if (task.projectId) {
-          const project = await ctx.db.get(task.projectId);
-          projectShortCode = project?.shortCode;
-        }
-        return { ...task, projectShortCode };
-      })
+    // Enrich tasks with project shortCode using a single workspace project query.
+    const workspaceProjects = await ctx.db
+      .query("projects")
+      .withIndex("by_workspace", (q) => q.eq("workspaceId", args.workspaceId))
+      .collect();
+    const shortCodeByProjectId = new Map(
+      workspaceProjects.map((project) => [project._id, project.shortCode])
     );
+    const enrichedTasks = tasks.map((task) => ({
+      ...task,
+      projectShortCode: task.projectId ? shortCodeByProjectId.get(task.projectId) : undefined,
+    }));
 
     // Group by status
     const columns = {

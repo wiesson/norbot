@@ -54,6 +54,11 @@ function ProjectPage() {
     ? undefined
     : projects?.find((p) => p.shortCode.toUpperCase() === projectShortCode.toUpperCase());
 
+  const selectedRepositoryId =
+    repoFilter && repositories?.some((repo) => repo._id === repoFilter)
+      ? (repoFilter as Id<"repositories">)
+      : undefined;
+
   const updateRepoFilter = (value: string | null) => {
     if (value === null) return;
     const params = new URLSearchParams(searchParams.toString());
@@ -66,10 +71,27 @@ function ProjectPage() {
     router.history.push(query ? `?${query}` : "?");
   };
 
-  if (!workspace || !projects) {
+  if (workspace === undefined || projects === undefined) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="animate-pulse text-muted-foreground">Loading...</div>
+      </div>
+    );
+  }
+
+  if (workspace === null) {
+    return (
+      <div className="min-h-screen bg-neutral-50 dark:bg-neutral-950">
+        <div className="container mx-auto px-4 py-8 max-w-2xl">
+          <Card>
+            <CardContent className="py-8 text-center space-y-2">
+              <p className="font-medium">Workspace not found</p>
+              <p className="text-sm text-muted-foreground">
+                No workspace with slug <code>{slug}</code> exists.
+              </p>
+            </CardContent>
+          </Card>
+        </div>
       </div>
     );
   }
@@ -145,7 +167,7 @@ function ProjectPage() {
 
             {repositories && repositories.length > 0 && (
               <Select
-                value={repoFilter ?? "all"}
+                value={selectedRepositoryId ?? "all"}
                 onValueChange={updateRepoFilter}
               >
                 <SelectTrigger className="w-[200px]">
@@ -192,7 +214,7 @@ function ProjectPage() {
         <div className="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8">
           <KanbanBoard
             workspaceId={workspace._id}
-            repositoryId={repoFilter ? (repoFilter as Id<"repositories">) : undefined}
+            repositoryId={selectedRepositoryId}
             projectId={selectedProject?._id}
           />
         </div>
