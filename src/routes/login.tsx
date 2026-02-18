@@ -15,6 +15,7 @@ const getProviders = createServerFn({ method: "GET" }).handler(async () => {
 });
 
 function LoginRouteView() {
+  const { redirect: redirectTo } = Route.useSearch();
   const providers = Route.useLoaderData();
   const [email, setEmail] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -29,7 +30,7 @@ function LoginRouteView() {
     try {
       await authClient.signIn.social({
         provider,
-        callbackURL: "/app",
+        callbackURL: redirectTo || "/app",
       });
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to start sign-in");
@@ -52,7 +53,7 @@ function LoginRouteView() {
     try {
       await (authClient.signIn as any).magicLink({
         email: email.trim(),
-        callbackURL: "/app",
+        callbackURL: redirectTo || "/app",
       });
       setMessage("Magic link sent. Check your inbox.");
     } catch (err) {
@@ -142,8 +143,13 @@ function LoginRouteView() {
 }
 
 export const Route = createFileRoute("/login")({
-  beforeLoad: async ({ context }) => {
-    await redirectAuthenticatedToHome(context);
+  validateSearch: (search: Record<string, unknown>) => {
+    const redirectTo = typeof search.redirect === "string" ? search.redirect : undefined;
+    const isSafeRedirect = redirectTo?.startsWith("/") ? redirectTo : undefined;
+    return { redirect: isSafeRedirect };
+  },
+  beforeLoad: async ({ context, search }) => {
+    await redirectAuthenticatedToHome(context, search.redirect);
   },
   loader: () => getProviders(),
   component: LoginRouteView,

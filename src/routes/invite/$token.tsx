@@ -1,22 +1,29 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@convex/_generated/api";
-import { useAuth } from "@/hooks/use-auth";
 import { useRouter } from "@tanstack/react-router";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Github, Check, Clock, AlertCircle } from "lucide-react";
+import { ensureViewer } from "@/lib/route-auth";
 
 export const Route = createFileRoute("/invite/$token")({
+  beforeLoad: async ({ context }) => {
+    if (!context.isAuthenticated) {
+      return { user: null, isAuthenticated: false };
+    }
+    const user = await ensureViewer();
+    return { user, isAuthenticated: !!user };
+  },
   component: AcceptInvitationPage,
 });
 
 function AcceptInvitationPage() {
   const { token } = Route.useParams();
-  const { user, isLoading: authLoading, isAuthenticated } = useAuth();
+  const { user, isAuthenticated } = Route.useRouteContext();
   const router = useRouter();
 
   const [isAccepting, setIsAccepting] = useState(false);
@@ -29,29 +36,6 @@ function AcceptInvitationPage() {
   // Mutation to accept
   const acceptInvitation = useMutation(api.invitations.accept);
 
-  // Store token for post-login acceptance
-  useEffect(() => {
-    if (token && !authLoading && !isAuthenticated) {
-      sessionStorage.setItem("pendingInviteToken", token);
-    }
-  }, [token, authLoading, isAuthenticated]);
-
-  // Auto-accept if logged in and username matches
-  useEffect(() => {
-    if (
-      user &&
-      invitation &&
-      invitation.status === "pending" &&
-      user.githubUsername.toLowerCase() === invitation.githubUsername.toLowerCase() &&
-      !accepted &&
-      !isAccepting &&
-      !error
-    ) {
-      handleAccept();
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user, invitation, accepted]);
-
   const handleAccept = async () => {
     if (!user || !invitation) return;
 
@@ -59,13 +43,11 @@ function AcceptInvitationPage() {
     setError(null);
 
     try {
-      const result = await acceptInvitation({
+      await acceptInvitation({
         token,
         userId: user._id,
       });
       setAccepted(true);
-      // Clear stored token
-      sessionStorage.removeItem("pendingInviteToken");
       // Redirect to workspace after a brief delay
       setTimeout(() => {
         if (invitation.workspace) {
@@ -82,12 +64,11 @@ function AcceptInvitationPage() {
   };
 
   const handleLogin = () => {
-    // Token is already stored in sessionStorage, redirect to login
-    router.history.push("/login");
+    router.history.push(`/login?redirect=${encodeURIComponent(`/invite/${token}`)}`);
   };
 
   // Loading state
-  if (authLoading || invitation === undefined) {
+  if (invitation === undefined) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-neutral-50 dark:bg-neutral-950">
         <div className="animate-pulse text-muted-foreground">Loading invitation...</div>
