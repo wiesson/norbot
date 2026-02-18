@@ -2,7 +2,6 @@
 
 import { useEffect } from "react";
 import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
-import { Dashboard } from "@/components/dashboard";
 import { WaitingRoom } from "@/components/waiting-room";
 import { SetupWizard } from "@/components/setup/setup-wizard";
 import { useAuth } from "@/hooks/use-auth";
@@ -13,7 +12,6 @@ import { cn } from "@/lib/utils";
 import { ArrowLeft } from "lucide-react";
 import { LogoutButton } from "@/components/logout-button";
 import { authClient } from "@/lib/auth-client";
-import LoginPage from "@/views/landing-page";
 
 function FullScreenLoading({ label = "Loading..." }: { label?: string }) {
   return (
@@ -21,44 +19,6 @@ function FullScreenLoading({ label = "Loading..." }: { label?: string }) {
       <div className="animate-pulse text-muted-foreground">{label}</div>
     </div>
   );
-}
-
-export function HomeRouteView() {
-  const { user, isLoading, isAuthenticated } = useAuth();
-  const navigate = useNavigate();
-
-  useEffect(() => {
-    if (!isLoading && isAuthenticated && user) {
-      const hasWorkspaces = !!user.workspaces?.length;
-      if (!hasWorkspaces) {
-        navigate({ to: "/waiting", replace: true });
-        return;
-      }
-
-      if (!user.onboarding?.completedAt) {
-        navigate({ to: "/setup", replace: true });
-      }
-    }
-  }, [isAuthenticated, isLoading, navigate, user]);
-
-  if (isLoading) {
-    return <FullScreenLoading />;
-  }
-
-  if (!isAuthenticated) {
-    return <LoginPage />;
-  }
-
-  if (!user) {
-    return <FullScreenLoading />;
-  }
-
-  const hasWorkspaces = !!user.workspaces?.length;
-  if (!hasWorkspaces || !user.onboarding?.completedAt) {
-    return <FullScreenLoading />;
-  }
-
-  return <Dashboard user={user} />;
 }
 
 export function WaitingRouteView() {
