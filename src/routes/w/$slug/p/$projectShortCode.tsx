@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useEffect, useMemo } from "react";
+import { useMemo } from "react";
 import { useQuery } from "convex/react";
 import { api } from "@convex/_generated/api";
 import { useAuth } from "@/hooks/use-auth";
@@ -30,7 +30,7 @@ export const Route = createFileRoute("/w/$slug/p/$projectShortCode")({
 
 function ProjectPage() {
   const { slug, projectShortCode } = Route.useParams();
-  const { user, isLoading: authLoading, isAuthenticated } = useAuth();
+  const { user, isLoading: authLoading } = useAuth();
   const router = useRouter();
   const searchStr = useRouterState({ select: (state) => state.location.searchStr });
   const searchParams = useMemo(() => {
@@ -54,12 +54,6 @@ function ProjectPage() {
   const selectedProject = isAllProjects
     ? undefined
     : projects?.find((p) => p.shortCode.toUpperCase() === projectShortCode.toUpperCase());
-
-  useEffect(() => {
-    if (!authLoading && !isAuthenticated) {
-      router.history.push("/login");
-    }
-  }, [authLoading, isAuthenticated, router]);
 
   const updateRepoFilter = (value: string | null) => {
     if (value === null) return;

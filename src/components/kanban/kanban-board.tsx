@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useCallback, useRef, useEffect } from "react";
+import { useState, useMemo, useCallback, useRef } from "react";
 import { useQuery, useMutation } from "convex/react";
 import { useRouter, useRouterState } from "@tanstack/react-router";
 import { api } from "@convex/_generated/api";
@@ -48,8 +48,22 @@ export function KanbanBoard({ workspaceId, repositoryId, projectId }: KanbanBoar
   // URL-based task selection (persist modal state to URL)
   const taskIdFromUrl = searchParams.get("task") as Id<"tasks"> | null;
 
+  // URL is the source of truth for selected task
+  const selectedTaskId = taskIdFromUrl;
+  const setSelectedTaskId = useCallback(
+    (id: Id<"tasks"> | null) => {
+      const params = new URLSearchParams(searchParams.toString());
+      if (id) {
+        params.set("task", id);
+      } else {
+        params.delete("task");
+      }
+      router.history.replace(`?${params.toString()}`);
+    },
+    [router, searchParams]
+  );
+
   // Modal states
-  const [selectedTaskId, setSelectedTaskId] = useState<Id<"tasks"> | null>(taskIdFromUrl);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [createModalStatus, setCreateModalStatus] = useState<
     "backlog" | "todo" | "in_progress" | "in_review"
@@ -64,11 +78,9 @@ export function KanbanBoard({ workspaceId, repositoryId, projectId }: KanbanBoar
     [workspaceId, repositoryId, projectId]
   );
 
-  // Use ref to always have current kanbanArgs in optimistic update callback
+  // Keep ref current for optimistic update callback (assign during render)
   const kanbanArgsRef = useRef(kanbanArgs);
-  useEffect(() => {
-    kanbanArgsRef.current = kanbanArgs;
-  }, [kanbanArgs]);
+  kanbanArgsRef.current = kanbanArgs;
 
   const kanbanData = useQuery(api.tasks.getKanban, kanbanArgs);
 
@@ -78,19 +90,6 @@ export function KanbanBoard({ workspaceId, repositoryId, projectId }: KanbanBoar
       optimisticStatusUpdate(localStore, kanbanArgsRef.current, id, status);
     }
   );
-
-  // Sync URL param when task changes
-  useEffect(() => {
-    if (selectedTaskId !== taskIdFromUrl) {
-      const params = new URLSearchParams(searchParams.toString());
-      if (selectedTaskId) {
-        params.set("task", selectedTaskId);
-      } else {
-        params.delete("task");
-      }
-      router.history.replace(`?${params.toString()}`);
-    }
-  }, [selectedTaskId, taskIdFromUrl, router, searchParams]);
 
   // Sensors for drag detection
   const pointerSensor = useSensor(PointerSensor, {

@@ -1,9 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useEffect } from "react";
 import { useQuery } from "convex/react";
 import { api } from "@convex/_generated/api";
 import { useAuth } from "@/hooks/use-auth";
-import { useRouter } from "@tanstack/react-router";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { buttonVariants } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -21,20 +19,13 @@ export const Route = createFileRoute("/w/$slug/")({
 
 function WorkspacePage() {
   const { slug } = Route.useParams();
-  const { user, isLoading: authLoading, isAuthenticated } = useAuth();
-  const router = useRouter();
+  const { user, isLoading: authLoading } = useAuth();
 
   const workspace = useQuery(api.workspaces.getBySlug, { slug });
   const projects = useQuery(
     api.projects.list,
     workspace ? { workspaceId: workspace._id } : "skip"
   );
-
-  useEffect(() => {
-    if (!authLoading && !isAuthenticated) {
-      router.history.push("/login");
-    }
-  }, [authLoading, isAuthenticated, router]);
 
   if (authLoading || !workspace) {
     return (

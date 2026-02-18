@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useQuery, useMutation, useAction } from "convex/react";
 import { api } from "@convex/_generated/api";
 import { useAuth } from "@/hooks/use-auth";
@@ -41,7 +41,7 @@ import {
 import { cn } from "@/lib/utils";
 import { ArrowLeft, Slack, Trash2, UserMinus, Lock, Globe, Plus, FolderGit2, UserPlus, Hash, Key } from "lucide-react";
 import { ApiKeysSection } from "@/components/settings/api-keys-section";
-import type { Id } from "@convex/_generated/dataModel";
+import type { Doc, Id } from "@convex/_generated/dataModel";
 import { RepoSelector, type Repo } from "@/components/repo-selector";
 import { requireAuth } from "@/lib/route-auth";
 
@@ -57,13 +57,52 @@ export const Route = createFileRoute("/w/$slug/settings")({
 
 function WorkspaceSettingsPage() {
   const { slug } = Route.useParams();
-  const { user, isLoading: authLoading, isAuthenticated } = useAuth();
+  const { user, isLoading: authLoading } = useAuth();
+  const workspace = useQuery(api.workspaces.getBySlug, { slug });
+
+  if (authLoading || !workspace) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-pulse text-muted-foreground">Loading...</div>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return null;
+  }
+
+  return (
+    <WorkspaceSettingsForm
+      key={workspace._id}
+      workspace={workspace}
+      user={user}
+      slug={slug}
+    />
+  );
+}
+
+type AuthUser = NonNullable<ReturnType<typeof useAuth>["user"]>;
+
+function WorkspaceSettingsForm({
+  workspace: initialWorkspace,
+  user,
+  slug,
+}: {
+  workspace: Doc<"workspaces">;
+  user: AuthUser;
+  slug: string;
+}) {
   const router = useRouter();
 
-  // Form state
-  const [workspaceName, setWorkspaceName] = useState("");
-  const [aiExtractionEnabled, setAiExtractionEnabled] = useState(true);
-  const [defaultPriority, setDefaultPriority] = useState<Priority | "">("");
+  // Form state initialized from workspace props (key-based remount handles workspace changes)
+  const [workspaceName, setWorkspaceName] = useState(initialWorkspace.name);
+  const [aiExtractionEnabled, setAiExtractionEnabled] = useState(
+    initialWorkspace.settings?.aiExtractionEnabled ?? true
+  );
+  const [defaultPriority, setDefaultPriority] = useState<Priority | "">(
+    initialWorkspace.settings?.defaultTaskPriority ?? ""
+  );
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
 
   // Repository state
@@ -84,23 +123,23 @@ function WorkspaceSettingsPage() {
   const [isLoadingChannels, setIsLoadingChannels] = useState(false);
   const [selectedChannelId, setSelectedChannelId] = useState<string | null>(null);
 
-  // Queries
-  const workspace = useQuery(api.workspaces.getBySlug, { slug });
+  // Queries (workspace._id is stable within this component instance due to key-based remount)
+  const workspace = useQuery(api.workspaces.getBySlug, { slug }) ?? initialWorkspace;
   const members = useQuery(
     api.workspaces.getMembers,
-    workspace ? { workspaceId: workspace._id } : "skip"
+    { workspaceId: workspace._id }
   );
   const userMembership = useQuery(
     api.workspaces.getUserMembership,
-    workspace && user ? { workspaceId: workspace._id, userId: user._id } : "skip"
+    { workspaceId: workspace._id, userId: user._id }
   );
   const repositories = useQuery(
     api.repositories.list,
-    workspace ? { workspaceId: workspace._id } : "skip"
+    { workspaceId: workspace._id }
   );
   const channelMappings = useQuery(
     api.channelMappings.list,
-    workspace ? { workspaceId: workspace._id } : "skip"
+    { workspaceId: workspace._id }
   );
 
   // Mutations
@@ -124,22 +163,6 @@ function WorkspaceSettingsPage() {
   const isAdmin = userMembership?.role === "admin";
   const validMembers = members?.filter((m): m is NonNullable<typeof m> => m !== null) ?? [];
   const adminCount = validMembers.filter((m) => m.role === "admin").length;
-
-  // Sync form state with workspace data
-  useEffect(() => {
-    if (workspace) {
-      setWorkspaceName(workspace.name);
-      setAiExtractionEnabled(workspace.settings?.aiExtractionEnabled ?? true);
-      setDefaultPriority(workspace.settings?.defaultTaskPriority ?? "");
-    }
-  }, [workspace]);
-
-  // Auth redirect
-  useEffect(() => {
-    if (!authLoading && !isAuthenticated) {
-      router.history.push("/login");
-    }
-  }, [authLoading, isAuthenticated, router]);
 
   // Handlers
   const handleNameBlur = async () => {
@@ -321,19 +344,6 @@ function WorkspaceSettingsPage() {
   const handleRemoveChannel = async (mappingId: Id<"channelMappings">) => {
     await removeChannelMapping({ id: mappingId });
   };
-
-  // Loading state
-  if (authLoading || !workspace) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-pulse text-muted-foreground">Loading...</div>
-      </div>
-    );
-  }
-
-  if (!user) {
-    return null;
-  }
 
   return (
     <div className="min-h-screen bg-neutral-50 dark:bg-neutral-950">

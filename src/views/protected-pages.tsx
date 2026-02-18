@@ -23,19 +23,6 @@ function FullScreenLoading({ label = "Loading..." }: { label?: string }) {
   );
 }
 
-function useRequireAuth() {
-  const { user, isLoading, isAuthenticated } = useAuth();
-  const navigate = useNavigate();
-
-  useEffect(() => {
-    if (!isLoading && !isAuthenticated) {
-      navigate({ to: "/login", replace: true });
-    }
-  }, [isAuthenticated, isLoading, navigate]);
-
-  return { user, isLoading, isAuthenticated };
-}
-
 export function HomeRouteView() {
   const { user, isLoading, isAuthenticated } = useAuth();
   const navigate = useNavigate();
@@ -75,7 +62,7 @@ export function HomeRouteView() {
 }
 
 export function WaitingRouteView() {
-  const { user, isLoading, isAuthenticated } = useRequireAuth();
+  const { user, isLoading, isAuthenticated } = useAuth();
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -100,7 +87,7 @@ export function WaitingRouteView() {
 }
 
 export function SetupRouteView() {
-  const { user, isLoading, isAuthenticated } = useRequireAuth();
+  const { user, isLoading, isAuthenticated } = useAuth();
   const navigate = useNavigate();
   const searchStr = useRouterState({ select: (state) => state.location.searchStr });
   const step = new URLSearchParams(searchStr).get("step");
@@ -127,7 +114,7 @@ export function SetupRouteView() {
 }
 
 export function SettingsRouteView() {
-  const { user, isLoading } = useRequireAuth();
+  const { user, isLoading } = useAuth();
 
   if (isLoading || !user) {
     return <FullScreenLoading />;
@@ -179,7 +166,7 @@ export function SettingsRouteView() {
 }
 
 export function NewWorkspaceRouteView() {
-  const { user, isLoading } = useRequireAuth();
+  const { user, isLoading } = useAuth();
 
   if (isLoading || !user) {
     return <FullScreenLoading />;
