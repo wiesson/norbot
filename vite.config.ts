@@ -1,29 +1,26 @@
 import { tanstackStart } from "@tanstack/react-start/plugin/vite";
-import { defineConfig, loadEnv } from "vite";
+import { defineConfig } from "vite";
 import viteReact from "@vitejs/plugin-react";
 import { devtools } from "@tanstack/devtools-vite";
 import { nitro } from "nitro/vite";
 import viteTsConfigPaths from "vite-tsconfig-paths";
 import tailwindcss from "@tailwindcss/vite";
 
-export default defineConfig(({ mode }) => {
-  const env = loadEnv(mode, process.cwd());
-  return {
-    plugins: [
-      devtools(),
-      nitro({
-        routeRules: {
-          "/api/auth/**": {
-            proxy: env.VITE_CONVEX_SITE_URL + "/api/auth/**",
-          },
+export default defineConfig({
+  plugins: [
+    devtools(),
+    nitro({
+      routeRules: {
+        "/api/auth/**": {
+          proxy: process.env.VITE_CONVEX_SITE_URL + "/api/auth/**",
         },
-      }),
-      viteTsConfigPaths({
-        projects: ["./tsconfig.json"],
-      }),
-      tailwindcss(),
-      tanstackStart(),
-      viteReact(),
-    ],
-  };
+      },
+    }),
+    viteTsConfigPaths({
+      projects: ["./tsconfig.json"],
+    }),
+    tailwindcss(),
+    tanstackStart(),
+    viteReact(),
+  ],
 });
