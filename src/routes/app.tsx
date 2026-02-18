@@ -1,16 +1,10 @@
 import { createFileRoute, redirect } from "@tanstack/react-router";
-import { ensureViewer, requireAuth } from "@/lib/route-auth";
+import { requireAuthWithUser } from "@/lib/route-auth";
 import { Dashboard } from "@/components/dashboard";
 
 export const Route = createFileRoute("/app")({
   beforeLoad: async ({ context }) => {
-    requireAuth(context);
-
-    const user = await ensureViewer();
-
-    if (!user) {
-      throw redirect({ to: "/login", search: { redirect: undefined } });
-    }
+    const { user } = await requireAuthWithUser(context);
 
     if (!user.workspaces?.length) {
       throw redirect({ to: "/waiting" });

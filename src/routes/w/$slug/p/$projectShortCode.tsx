@@ -31,6 +31,7 @@ function ProjectPage() {
   const { slug, projectShortCode } = Route.useParams();
   const { user } = Route.useRouteContext();
   const router = useRouter();
+  const pathname = useRouterState({ select: (state) => state.location.pathname });
   const searchStr = useRouterState({ select: (state) => state.location.searchStr });
   const searchParams = useMemo(() => {
     const raw = searchStr.startsWith("?") ? searchStr.slice(1) : searchStr;
@@ -45,14 +46,17 @@ function ProjectPage() {
     api.repositories.list,
     workspace ? { workspaceId: workspace._id } : "skip"
   );
-  const projects = useQuery(
+  const projectList = useQuery(
     api.projects.list,
     workspace ? { workspaceId: workspace._id } : "skip"
   );
-
-  const selectedProject = isAllProjects
-    ? undefined
-    : projects?.find((p) => p.shortCode.toUpperCase() === projectShortCode.toUpperCase());
+  const selectedProject = useQuery(
+    api.projects.getByShortCode,
+    workspace && !isAllProjects
+      ? { workspaceId: workspace._id, shortCode: projectShortCode }
+      : "skip"
+  );
+  const projects = projectList ?? [];
 
   const selectedRepositoryId =
     repoFilter && repositories?.some((repo) => repo._id === repoFilter)
@@ -68,10 +72,10 @@ function ProjectPage() {
       params.set("repo", value);
     }
     const query = params.toString();
-    router.history.push(query ? `?${query}` : "?");
+    router.history.push(query ? `${pathname}?${query}` : pathname);
   };
 
-  if (workspace === undefined || projects === undefined) {
+  if (workspace === undefined || (!isAllProjects && selectedProject === undefined)) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="animate-pulse text-muted-foreground">Loading...</div>
@@ -96,7 +100,7 @@ function ProjectPage() {
     );
   }
 
-  if (!isAllProjects && !selectedProject) {
+  if (!isAllProjects && selectedProject === null) {
     return (
       <div className="min-h-screen bg-neutral-50 dark:bg-neutral-950">
         <div className="container mx-auto px-4 py-8 max-w-2xl">

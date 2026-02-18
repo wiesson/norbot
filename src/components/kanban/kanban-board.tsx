@@ -39,6 +39,7 @@ const columns = [
 
 export function KanbanBoard({ workspaceId, repositoryId, projectId }: KanbanBoardProps) {
   const router = useRouter();
+  const pathname = useRouterState({ select: (state) => state.location.pathname });
   const searchStr = useRouterState({ select: (state) => state.location.searchStr });
   const searchParams = useMemo(() => {
     const raw = searchStr.startsWith("?") ? searchStr.slice(1) : searchStr;
@@ -58,9 +59,10 @@ export function KanbanBoard({ workspaceId, repositoryId, projectId }: KanbanBoar
       } else {
         params.delete("task");
       }
-      router.history.replace(`?${params.toString()}`);
+      const query = params.toString();
+      router.history.replace(query ? `${pathname}?${query}` : pathname);
     },
-    [router, searchParams]
+    [pathname, router, searchParams]
   );
 
   // Modal states

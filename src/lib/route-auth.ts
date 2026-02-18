@@ -39,13 +39,18 @@ export const ensureViewer = createServerFn({ method: "GET" }).handler(async () =
   return await fetchAuthQuery(api.auth.viewer, {});
 });
 
-export async function requireAuthWithUser(context: {
-  isAuthenticated: boolean;
-}) {
-  requireAuth(context);
+export async function requireViewer() {
   const user = await ensureViewer();
   if (!user) {
     throw redirect({ to: "/login", search: { redirect: undefined } });
   }
+  return user;
+}
+
+export async function requireAuthWithUser(context: {
+  isAuthenticated: boolean;
+}) {
+  requireAuth(context);
+  const user = await requireViewer();
   return { user };
 }

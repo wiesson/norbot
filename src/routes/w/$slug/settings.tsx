@@ -59,10 +59,18 @@ function WorkspaceSettingsPage() {
   const { user } = Route.useRouteContext();
   const workspace = useQuery(api.workspaces.getBySlug, { slug });
 
-  if (!workspace) {
+  if (workspace === undefined) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="animate-pulse text-muted-foreground">Loading...</div>
+      </div>
+    );
+  }
+
+  if (workspace === null) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-muted-foreground">Workspace not found.</div>
       </div>
     );
   }
