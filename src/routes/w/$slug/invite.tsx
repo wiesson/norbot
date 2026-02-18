@@ -2,7 +2,6 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@convex/_generated/api";
-import { useAuth } from "@/hooks/use-auth";
 import { useRouter } from "@tanstack/react-router";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -20,20 +19,20 @@ import {
 import { cn } from "@/lib/utils";
 import { ArrowLeft, UserPlus, Copy, Check, Clock, X, Github, Users } from "lucide-react";
 import type { Doc } from "@convex/_generated/dataModel";
-import { requireAuth } from "@/lib/route-auth";
+import { requireAuthWithUser } from "@/lib/route-auth";
 
 type Role = "admin" | "member" | "viewer";
 
 export const Route = createFileRoute("/w/$slug/invite")({
-  beforeLoad: ({ context }) => {
-    requireAuth(context);
+  beforeLoad: async ({ context }) => {
+    return await requireAuthWithUser(context);
   },
   component: InvitePage,
 });
 
 function InvitePage() {
   const { slug } = Route.useParams();
-  const { user, isLoading: authLoading, isAuthenticated } = useAuth();
+  const { user } = Route.useRouteContext();
   const router = useRouter();
 
   const [githubUsername, setGithubUsername] = useState("");
@@ -103,23 +102,13 @@ function InvitePage() {
     }
   };
 
-  // Auth redirect
-  if (!authLoading && !isAuthenticated) {
-    router.history.push("/login");
-    return null;
-  }
-
   // Loading state
-  if (authLoading || !workspace) {
+  if (!workspace) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="animate-pulse text-muted-foreground">Loading...</div>
       </div>
     );
-  }
-
-  if (!user) {
-    return null;
   }
 
   // Only admins can invite

@@ -2,7 +2,6 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useMemo } from "react";
 import { useQuery } from "convex/react";
 import { api } from "@convex/_generated/api";
-import { useAuth } from "@/hooks/use-auth";
 import { useRouter, useRouterState } from "@tanstack/react-router";
 import { KanbanBoard } from "@/components/kanban/kanban-board";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -19,18 +18,18 @@ import { Card, CardContent } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import { Settings, LogOut, ChevronLeft, GitBranch, Slack } from "lucide-react";
 import type { Id } from "@convex/_generated/dataModel";
-import { requireAuth } from "@/lib/route-auth";
+import { requireAuthWithUser } from "@/lib/route-auth";
 
 export const Route = createFileRoute("/w/$slug/p/$projectShortCode")({
-  beforeLoad: ({ context }) => {
-    requireAuth(context);
+  beforeLoad: async ({ context }) => {
+    return await requireAuthWithUser(context);
   },
   component: ProjectPage,
 });
 
 function ProjectPage() {
   const { slug, projectShortCode } = Route.useParams();
-  const { user, isLoading: authLoading } = useAuth();
+  const { user } = Route.useRouteContext();
   const router = useRouter();
   const searchStr = useRouterState({ select: (state) => state.location.searchStr });
   const searchParams = useMemo(() => {
@@ -67,16 +66,12 @@ function ProjectPage() {
     router.history.push(query ? `?${query}` : "?");
   };
 
-  if (authLoading || !workspace || !projects) {
+  if (!workspace || !projects) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="animate-pulse text-muted-foreground">Loading...</div>
       </div>
     );
-  }
-
-  if (!user) {
-    return null;
   }
 
   if (!isAllProjects && !selectedProject) {

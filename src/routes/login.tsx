@@ -1,4 +1,4 @@
-import { FormEvent, useEffect, useState } from "react";
+import { FormEvent, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { createServerFn } from "@tanstack/react-start";
 import { Button } from "@/components/ui/button";
@@ -8,7 +8,6 @@ import { Label } from "@/components/ui/label";
 import { fetchAuthQuery } from "@/lib/auth-server";
 import { api } from "@convex/_generated/api";
 import { authClient } from "@/lib/auth-client";
-import { useNavigate } from "@tanstack/react-router";
 import { redirectAuthenticatedToHome } from "@/lib/route-auth";
 
 const getProviders = createServerFn({ method: "GET" }).handler(async () => {
@@ -16,19 +15,11 @@ const getProviders = createServerFn({ method: "GET" }).handler(async () => {
 });
 
 function LoginRouteView() {
-  const navigate = useNavigate();
-  const { data: session } = authClient.useSession();
   const providers = Route.useLoaderData();
   const [email, setEmail] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (session) {
-      navigate({ to: "/", replace: true });
-    }
-  }, [navigate, session]);
 
   const handleSocialSignIn = async (provider: "github" | "google") => {
     setError(null);
@@ -38,7 +29,7 @@ function LoginRouteView() {
     try {
       await authClient.signIn.social({
         provider,
-        callbackURL: "/",
+        callbackURL: "/app",
       });
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to start sign-in");
@@ -61,7 +52,7 @@ function LoginRouteView() {
     try {
       await (authClient.signIn as any).magicLink({
         email: email.trim(),
-        callbackURL: "/",
+        callbackURL: "/app",
       });
       setMessage("Magic link sent. Check your inbox.");
     } catch (err) {

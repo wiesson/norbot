@@ -1,8 +1,8 @@
 import { createFileRoute, redirect } from "@tanstack/react-router";
-import { requireAuth, getViewer } from "@/lib/route-auth";
-import { WaitingRoom } from "@/components/waiting-room";
+import { getViewer, requireAuth } from "@/lib/route-auth";
+import { Dashboard } from "@/components/dashboard";
 
-export const Route = createFileRoute("/waiting")({
+export const Route = createFileRoute("/app")({
   beforeLoad: async ({ context }) => {
     requireAuth(context);
 
@@ -12,20 +12,19 @@ export const Route = createFileRoute("/waiting")({
       throw redirect({ to: "/login" });
     }
 
-    if (user.workspaces?.length) {
-      throw redirect({ to: "/app" });
+    if (!user.workspaces?.length) {
+      throw redirect({ to: "/waiting" });
     }
-
-    if (user.isApproved) {
+    if (!user.onboarding?.completedAt) {
       throw redirect({ to: "/setup", search: { step: undefined } });
     }
 
     return { user };
   },
-  component: WaitingPage,
+  component: AppPage,
 });
 
-function WaitingPage() {
+function AppPage() {
   const { user } = Route.useRouteContext();
-  return <WaitingRoom user={user} />;
+  return <Dashboard user={user} />;
 }

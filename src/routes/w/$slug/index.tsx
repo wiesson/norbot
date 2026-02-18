@@ -1,25 +1,24 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "convex/react";
 import { api } from "@convex/_generated/api";
-import { useAuth } from "@/hooks/use-auth";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { buttonVariants } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import { Settings, LogOut, ChevronLeft, Slack, ArrowRight, FolderKanban } from "lucide-react";
-import { requireAuth } from "@/lib/route-auth";
+import { requireAuthWithUser } from "@/lib/route-auth";
 
 export const Route = createFileRoute("/w/$slug/")({
-  beforeLoad: ({ context }) => {
-    requireAuth(context);
+  beforeLoad: async ({ context }) => {
+    return await requireAuthWithUser(context);
   },
   component: WorkspacePage,
 });
 
 function WorkspacePage() {
   const { slug } = Route.useParams();
-  const { user, isLoading: authLoading } = useAuth();
+  const { user } = Route.useRouteContext();
 
   const workspace = useQuery(api.workspaces.getBySlug, { slug });
   const projects = useQuery(
@@ -27,16 +26,12 @@ function WorkspacePage() {
     workspace ? { workspaceId: workspace._id } : "skip"
   );
 
-  if (authLoading || !workspace) {
+  if (!workspace) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="animate-pulse text-muted-foreground">Loading...</div>
       </div>
     );
-  }
-
-  if (!user) {
-    return null;
   }
 
   return (
@@ -45,7 +40,7 @@ function WorkspacePage() {
         <div className="container mx-auto px-4 py-3 flex items-center justify-between">
           <div className="flex items-center gap-4">
             <a
-              href="/"
+              href="/app"
               className={cn(buttonVariants({ variant: "ghost", size: "icon" }), "mr-2")}
             >
               <ChevronLeft className="h-5 w-5" />

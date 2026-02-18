@@ -193,7 +193,7 @@ export function SetupWizard({ user }: SetupWizardProps) {
   }, [completeOnboarding, user._id, goToStep]);
 
   const handleGoToDashboard = useCallback(() => {
-    router.history.push("/");
+    router.history.push("/app");
   }, [router]);
 
   return (

@@ -1,10 +1,15 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { requireAuth } from "@/lib/route-auth";
+import { requireAuthWithUser } from "@/lib/route-auth";
 import { NewWorkspaceRouteView } from "@/views/protected-pages";
 
 export const Route = createFileRoute("/workspaces/new")({
-  beforeLoad: ({ context }) => {
-    requireAuth(context);
+  beforeLoad: async ({ context }) => {
+    return await requireAuthWithUser(context);
   },
-  component: NewWorkspaceRouteView,
+  component: NewWorkspacePage,
 });
+
+function NewWorkspacePage() {
+  const { user } = Route.useRouteContext();
+  return <NewWorkspaceRouteView user={user} />;
+}

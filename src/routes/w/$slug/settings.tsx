@@ -2,7 +2,6 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
 import { useQuery, useMutation, useAction } from "convex/react";
 import { api } from "@convex/_generated/api";
-import { useAuth } from "@/hooks/use-auth";
 import { useRouter } from "@tanstack/react-router";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -43,33 +42,29 @@ import { ArrowLeft, Slack, Trash2, UserMinus, Lock, Globe, Plus, FolderGit2, Use
 import { ApiKeysSection } from "@/components/settings/api-keys-section";
 import type { Doc, Id } from "@convex/_generated/dataModel";
 import { RepoSelector, type Repo } from "@/components/repo-selector";
-import { requireAuth } from "@/lib/route-auth";
+import { requireAuthWithUser, getViewer } from "@/lib/route-auth";
 
 type Priority = "critical" | "high" | "medium" | "low";
 type Role = "admin" | "member" | "viewer";
 
 export const Route = createFileRoute("/w/$slug/settings")({
-  beforeLoad: ({ context }) => {
-    requireAuth(context);
+  beforeLoad: async ({ context }) => {
+    return await requireAuthWithUser(context);
   },
   component: WorkspaceSettingsPage,
 });
 
 function WorkspaceSettingsPage() {
   const { slug } = Route.useParams();
-  const { user, isLoading: authLoading } = useAuth();
+  const { user } = Route.useRouteContext();
   const workspace = useQuery(api.workspaces.getBySlug, { slug });
 
-  if (authLoading || !workspace) {
+  if (!workspace) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="animate-pulse text-muted-foreground">Loading...</div>
       </div>
     );
-  }
-
-  if (!user) {
-    return null;
   }
 
   return (
@@ -82,7 +77,7 @@ function WorkspaceSettingsPage() {
   );
 }
 
-type AuthUser = NonNullable<ReturnType<typeof useAuth>["user"]>;
+type AuthUser = NonNullable<Awaited<ReturnType<typeof getViewer>>>;
 
 function WorkspaceSettingsForm({
   workspace: initialWorkspace,
@@ -224,7 +219,7 @@ function WorkspaceSettingsForm({
   const handleDeleteWorkspace = async () => {
     if (workspace) {
       await deleteWorkspace({ id: workspace._id });
-      router.history.push("/");
+      router.history.push("/app");
     }
   };
 

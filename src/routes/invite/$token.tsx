@@ -71,7 +71,7 @@ function AcceptInvitationPage() {
         if (invitation.workspace) {
           router.history.push(`/w/${invitation.workspace.slug}`);
         } else {
-          router.history.push("/");
+          router.history.push("/app");
         }
       }, 1500);
     } catch (err) {
@@ -106,7 +106,7 @@ function AcceptInvitationPage() {
             <p className="text-muted-foreground mb-4">
               This invitation link is invalid or has been cancelled.
             </p>
-            <Button onClick={() => router.history.push("/")}>Go to Home</Button>
+            <Button onClick={() => router.history.push("/app")}>Go to Home</Button>
           </CardContent>
         </Card>
       </div>
@@ -196,7 +196,7 @@ function AcceptInvitationPage() {
                 onClick={() =>
                   invitation.workspace
                     ? router.history.push(`/w/${invitation.workspace.slug}`)
-                    : router.history.push("/")
+                    : router.history.push("/app")
                 }
               >
                 Go to Workspace

@@ -1,10 +1,34 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { requireAuth } from "@/lib/route-auth";
-import { SetupRouteView } from "@/views/protected-pages";
+import { createFileRoute, redirect } from "@tanstack/react-router";
+import { requireAuth, getViewer } from "@/lib/route-auth";
+import { SetupWizard } from "@/components/setup/setup-wizard";
 
 export const Route = createFileRoute("/setup")({
-  beforeLoad: ({ context }) => {
+  validateSearch: (search: Record<string, unknown>) => ({
+    step: typeof search.step === "string" ? search.step : undefined,
+  }),
+  beforeLoad: async ({ context, search }) => {
     requireAuth(context);
+
+    const user = await getViewer();
+
+    if (!user) {
+      throw redirect({ to: "/login" });
+    }
+
+    if (!user.workspaces?.length && !user.isApproved) {
+      throw redirect({ to: "/waiting" });
+    }
+
+    if (user.onboarding?.completedAt && !search.step) {
+      throw redirect({ to: "/app" });
+    }
+
+    return { user };
   },
-  component: SetupRouteView,
+  component: SetupPage,
 });
+
+function SetupPage() {
+  const { user } = Route.useRouteContext();
+  return <SetupWizard user={user} />;
+}

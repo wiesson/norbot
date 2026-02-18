@@ -1,10 +1,15 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { requireAuth } from "@/lib/route-auth";
+import { requireAuthWithUser } from "@/lib/route-auth";
 import { SettingsRouteView } from "@/views/protected-pages";
 
 export const Route = createFileRoute("/settings")({
-  beforeLoad: ({ context }) => {
-    requireAuth(context);
+  beforeLoad: async ({ context }) => {
+    return await requireAuthWithUser(context);
   },
-  component: SettingsRouteView,
+  component: SettingsPage,
 });
+
+function SettingsPage() {
+  const { user } = Route.useRouteContext();
+  return <SettingsRouteView user={user} />;
+}
