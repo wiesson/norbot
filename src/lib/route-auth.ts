@@ -9,11 +9,14 @@ export function requireAuth(context: { isAuthenticated: boolean }) {
   }
 }
 
-export function redirectAuthenticatedToHome(context: {
+export async function redirectAuthenticatedToHome(context: {
   isAuthenticated: boolean;
 }) {
   if (context.isAuthenticated) {
-    throw redirect({ to: "/app" });
+    const user = await getViewer();
+    if (user) {
+      throw redirect({ to: "/app" });
+    }
   }
 }
 
