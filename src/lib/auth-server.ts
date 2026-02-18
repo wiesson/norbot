@@ -5,8 +5,12 @@ export const {
   getToken,
   fetchAuthQuery,
   fetchAuthMutation,
-  fetchAuthAction,
 } = convexBetterAuthReactStart({
   convexUrl: process.env.VITE_CONVEX_URL!,
   convexSiteUrl: process.env.VITE_CONVEX_SITE_URL!,
+  jwtCache: {
+    enabled: true,
+    // Retry once with a freshly fetched token on any Convex call failure.
+    isAuthError: () => false,
+  },
 });

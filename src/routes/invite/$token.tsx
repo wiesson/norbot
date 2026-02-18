@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useState } from "react";
+import { type ReactNode, useState } from "react";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@convex/_generated/api";
 import { useRouter } from "@tanstack/react-router";
@@ -103,7 +103,7 @@ function AcceptInvitationPage() {
   const isWrongUser =
     user && user.githubUsername.toLowerCase() !== invitation.githubUsername.toLowerCase();
 
-  return (
+  const renderInvitationCard = (content: ReactNode) => (
     <div className="min-h-screen flex items-center justify-center bg-neutral-50 dark:bg-neutral-950 px-4">
       <Card className="max-w-md w-full">
         <CardHeader className="text-center">
@@ -143,89 +143,100 @@ function AcceptInvitationPage() {
             <span>For: <strong>{invitation.githubUsername}</strong></span>
           </div>
 
-          {/* Status Messages */}
-          {accepted && (
-            <div className="text-center p-4 rounded-lg bg-green-50 dark:bg-green-950/30 text-green-700 dark:text-green-300">
-              <Check className="h-8 w-8 mx-auto mb-2" />
-              <p className="font-medium">Welcome to {invitation.workspace?.name}!</p>
-              <p className="text-sm mt-1">Redirecting you now...</p>
-            </div>
-          )}
-
-          {error && (
-            <div className="text-center p-4 rounded-lg bg-destructive/10 text-destructive">
-              <AlertCircle className="h-6 w-6 mx-auto mb-2" />
-              <p>{error}</p>
-            </div>
-          )}
-
-          {isExpired && !accepted && (
-            <div className="text-center p-4 rounded-lg bg-muted text-muted-foreground">
-              <Clock className="h-6 w-6 mx-auto mb-2" />
-              <p>This invitation has expired.</p>
-              <p className="text-sm mt-1">Please ask for a new invitation.</p>
-            </div>
-          )}
-
-          {isAlreadyAccepted && !accepted && (
-            <div className="text-center p-4 rounded-lg bg-muted text-muted-foreground">
-              <Check className="h-6 w-6 mx-auto mb-2" />
-              <p>This invitation has already been accepted.</p>
-              <Button
-                variant="outline"
-                className="mt-4"
-                onClick={() =>
-                  invitation.workspace
-                    ? router.history.push(`/w/${invitation.workspace.slug}`)
-                    : router.history.push("/app")
-                }
-              >
-                Go to Workspace
-              </Button>
-            </div>
-          )}
-
-          {isCancelled && (
-            <div className="text-center p-4 rounded-lg bg-muted text-muted-foreground">
-              <AlertCircle className="h-6 w-6 mx-auto mb-2" />
-              <p>This invitation has been cancelled.</p>
-            </div>
-          )}
-
-          {isWrongUser && !accepted && (
-            <div className="text-center p-4 rounded-lg bg-amber-50 dark:bg-amber-950/30 text-amber-700 dark:text-amber-300">
-              <AlertCircle className="h-6 w-6 mx-auto mb-2" />
-              <p>This invitation was sent to <strong>{invitation.githubUsername}</strong>.</p>
-              <p className="text-sm mt-1">
-                You&apos;re logged in as <strong>{user?.githubUsername}</strong>.
-              </p>
-              <p className="text-sm mt-2">
-                Please log out and sign in with the correct GitHub account.
-              </p>
-            </div>
-          )}
-
-          {/* Actions */}
-          {!accepted && !isExpired && !isAlreadyAccepted && !isCancelled && !isWrongUser && (
-            <div className="space-y-3">
-              {isAuthenticated && user ? (
-                <Button
-                  className="w-full"
-                  onClick={handleAccept}
-                  disabled={isAccepting}
-                >
-                  {isAccepting ? "Joining..." : "Accept Invitation"}
-                </Button>
-              ) : (
-                <Button className="w-full" onClick={handleLogin}>
-                  <Github className="h-4 w-4 mr-2" />
-                  Sign in with GitHub to Join
-                </Button>
-              )}
-            </div>
-          )}
+          {content}
         </CardContent>
       </Card>
     </div>
+  );
+
+  if (accepted) {
+    return renderInvitationCard(
+      <div className="text-center p-4 rounded-lg bg-green-50 dark:bg-green-950/30 text-green-700 dark:text-green-300">
+        <Check className="h-8 w-8 mx-auto mb-2" />
+        <p className="font-medium">Welcome to {invitation.workspace?.name}!</p>
+        <p className="text-sm mt-1">Redirecting you now...</p>
+      </div>
+    );
+  }
+
+  if (isExpired) {
+    return renderInvitationCard(
+      <div className="text-center p-4 rounded-lg bg-muted text-muted-foreground">
+        <Clock className="h-6 w-6 mx-auto mb-2" />
+        <p>This invitation has expired.</p>
+        <p className="text-sm mt-1">Please ask for a new invitation.</p>
+      </div>
+    );
+  }
+
+  if (isAlreadyAccepted) {
+    return renderInvitationCard(
+      <div className="text-center p-4 rounded-lg bg-muted text-muted-foreground">
+        <Check className="h-6 w-6 mx-auto mb-2" />
+        <p>This invitation has already been accepted.</p>
+        <Button
+          variant="outline"
+          className="mt-4"
+          onClick={() =>
+            invitation.workspace
+              ? router.history.push(`/w/${invitation.workspace.slug}`)
+              : router.history.push("/app")
+          }
+        >
+          Go to Workspace
+        </Button>
+      </div>
+    );
+  }
+
+  if (isCancelled) {
+    return renderInvitationCard(
+      <div className="text-center p-4 rounded-lg bg-muted text-muted-foreground">
+        <AlertCircle className="h-6 w-6 mx-auto mb-2" />
+        <p>This invitation has been cancelled.</p>
+      </div>
+    );
+  }
+
+  if (isWrongUser) {
+    return renderInvitationCard(
+      <div className="text-center p-4 rounded-lg bg-amber-50 dark:bg-amber-950/30 text-amber-700 dark:text-amber-300">
+        <AlertCircle className="h-6 w-6 mx-auto mb-2" />
+        <p>This invitation was sent to <strong>{invitation.githubUsername}</strong>.</p>
+        <p className="text-sm mt-1">
+          You&apos;re logged in as <strong>{user?.githubUsername}</strong>.
+        </p>
+        <p className="text-sm mt-2">
+          Please log out and sign in with the correct GitHub account.
+        </p>
+      </div>
+    );
+  }
+
+  return renderInvitationCard(
+    <>
+      {error && (
+        <div className="text-center p-4 rounded-lg bg-destructive/10 text-destructive">
+          <AlertCircle className="h-6 w-6 mx-auto mb-2" />
+          <p>{error}</p>
+        </div>
+      )}
+      <div className="space-y-3">
+        {isAuthenticated && user ? (
+          <Button
+            className="w-full"
+            onClick={handleAccept}
+            disabled={isAccepting}
+          >
+            {isAccepting ? "Joining..." : "Accept Invitation"}
+          </Button>
+        ) : (
+          <Button className="w-full" onClick={handleLogin}>
+            <Github className="h-4 w-4 mr-2" />
+            Sign in with GitHub to Join
+          </Button>
+        )}
+      </div>
+    </>
   );
 }

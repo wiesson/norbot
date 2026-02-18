@@ -1,4 +1,3 @@
-import { v } from "convex/values";
 import { betterAuth } from "better-auth";
 import { magicLink } from "better-auth/plugins";
 import { createClient, type GenericCtx } from "@convex-dev/better-auth";
@@ -10,9 +9,9 @@ import authConfig from "./auth.config";
 
 export const authComponent = createClient<DataModel>(components.betterAuth as any);
 
-const appOrigin = process.env.APP_URL;
+const appOrigin = process.env.SITE_URL || process.env.APP_URL;
 if (!appOrigin) {
-  throw new Error("Missing APP_URL environment variable");
+  throw new Error("Missing SITE_URL or APP_URL environment variable");
 }
 
 function deriveUsernameFromEmail(email: string): string {
@@ -193,14 +192,6 @@ export const viewer = query({
     }
 
     return await getUserWithWorkspaces(ctx, existing._id);
-  },
-});
-
-export const hasSession = query({
-  args: {},
-  handler: async (ctx) => {
-    const authUser = await authComponent.getAuthUser(ctx);
-    return !!authUser;
   },
 });
 

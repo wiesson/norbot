@@ -7,6 +7,10 @@ import viteTsConfigPaths from "vite-tsconfig-paths";
 import tailwindcss from "@tailwindcss/vite";
 
 export default defineConfig({
+  ssr: {
+    // Required by Convex + Better Auth SSR setup to avoid resolution/runtime issues.
+    noExternal: ["@convex-dev/better-auth"],
+  },
   plugins: [
     devtools(),
     nitro(),
