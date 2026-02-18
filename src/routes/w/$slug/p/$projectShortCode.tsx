@@ -190,7 +190,7 @@ function ProjectPage() {
               </span>
             </div>
             <a
-              href="/api/auth/logout"
+              href="/logout"
               className={cn(buttonVariants({ variant: "ghost", size: "icon" }))}
             >
               <LogOut className="h-5 w-5" />

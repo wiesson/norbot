@@ -20,7 +20,7 @@ import { Route as InviteTokenRouteImport } from './routes/invite/$token'
 import { Route as WSlugIndexRouteImport } from './routes/w/$slug/index'
 import { Route as WSlugSettingsRouteImport } from './routes/w/$slug/settings'
 import { Route as WSlugInviteRouteImport } from './routes/w/$slug/invite'
-import { Route as ApiAuthLogoutRouteImport } from './routes/api/auth/logout'
+import { Route as LogoutRouteImport } from './routes/logout'
 import { Route as WSlugPProjectShortCodeRouteImport } from './routes/w/$slug/p/$projectShortCode'
 
 const WaitingRoute = WaitingRouteImport.update({
@@ -78,9 +78,9 @@ const WSlugInviteRoute = WSlugInviteRouteImport.update({
   path: '/w/$slug/invite',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ApiAuthLogoutRoute = ApiAuthLogoutRouteImport.update({
-  id: '/api/auth/logout',
-  path: '/api/auth/logout',
+const LogoutRoute = LogoutRouteImport.update({
+  id: '/logout',
+  path: '/logout',
   getParentRoute: () => rootRouteImport,
 } as any)
 const WSlugPProjectShortCodeRoute = WSlugPProjectShortCodeRouteImport.update({
@@ -98,7 +98,7 @@ export interface FileRoutesByFullPath {
   '/waiting': typeof WaitingRoute
   '/invite/$token': typeof InviteTokenRoute
   '/workspaces/new': typeof WorkspacesNewRoute
-  '/api/auth/logout': typeof ApiAuthLogoutRoute
+  '/logout': typeof LogoutRoute
   '/w/$slug/invite': typeof WSlugInviteRoute
   '/w/$slug/settings': typeof WSlugSettingsRoute
   '/w/$slug/': typeof WSlugIndexRoute
@@ -113,7 +113,7 @@ export interface FileRoutesByTo {
   '/waiting': typeof WaitingRoute
   '/invite/$token': typeof InviteTokenRoute
   '/workspaces/new': typeof WorkspacesNewRoute
-  '/api/auth/logout': typeof ApiAuthLogoutRoute
+  '/logout': typeof LogoutRoute
   '/w/$slug/invite': typeof WSlugInviteRoute
   '/w/$slug/settings': typeof WSlugSettingsRoute
   '/w/$slug': typeof WSlugIndexRoute
@@ -129,7 +129,7 @@ export interface FileRoutesById {
   '/waiting': typeof WaitingRoute
   '/invite/$token': typeof InviteTokenRoute
   '/workspaces/new': typeof WorkspacesNewRoute
-  '/api/auth/logout': typeof ApiAuthLogoutRoute
+  '/logout': typeof LogoutRoute
   '/w/$slug/invite': typeof WSlugInviteRoute
   '/w/$slug/settings': typeof WSlugSettingsRoute
   '/w/$slug/': typeof WSlugIndexRoute
@@ -146,7 +146,7 @@ export interface FileRouteTypes {
     | '/waiting'
     | '/invite/$token'
     | '/workspaces/new'
-    | '/api/auth/logout'
+    | '/logout'
     | '/w/$slug/invite'
     | '/w/$slug/settings'
     | '/w/$slug/'
@@ -161,7 +161,7 @@ export interface FileRouteTypes {
     | '/waiting'
     | '/invite/$token'
     | '/workspaces/new'
-    | '/api/auth/logout'
+    | '/logout'
     | '/w/$slug/invite'
     | '/w/$slug/settings'
     | '/w/$slug'
@@ -176,7 +176,7 @@ export interface FileRouteTypes {
     | '/waiting'
     | '/invite/$token'
     | '/workspaces/new'
-    | '/api/auth/logout'
+    | '/logout'
     | '/w/$slug/invite'
     | '/w/$slug/settings'
     | '/w/$slug/'
@@ -192,7 +192,7 @@ export interface RootRouteChildren {
   WaitingRoute: typeof WaitingRoute
   InviteTokenRoute: typeof InviteTokenRoute
   WorkspacesNewRoute: typeof WorkspacesNewRoute
-  ApiAuthLogoutRoute: typeof ApiAuthLogoutRoute
+  LogoutRoute: typeof LogoutRoute
   WSlugInviteRoute: typeof WSlugInviteRoute
   WSlugSettingsRoute: typeof WSlugSettingsRoute
   WSlugIndexRoute: typeof WSlugIndexRoute
@@ -278,11 +278,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof WSlugInviteRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/api/auth/logout': {
-      id: '/api/auth/logout'
-      path: '/api/auth/logout'
-      fullPath: '/api/auth/logout'
-      preLoaderRoute: typeof ApiAuthLogoutRouteImport
+    '/logout': {
+      id: '/logout'
+      path: '/logout'
+      fullPath: '/logout'
+      preLoaderRoute: typeof LogoutRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/w/$slug/p/$projectShortCode': {
@@ -304,7 +304,7 @@ const rootRouteChildren: RootRouteChildren = {
   WaitingRoute: WaitingRoute,
   InviteTokenRoute: InviteTokenRoute,
   WorkspacesNewRoute: WorkspacesNewRoute,
-  ApiAuthLogoutRoute: ApiAuthLogoutRoute,
+  LogoutRoute: LogoutRoute,
   WSlugInviteRoute: WSlugInviteRoute,
   WSlugSettingsRoute: WSlugSettingsRoute,
   WSlugIndexRoute: WSlugIndexRoute,

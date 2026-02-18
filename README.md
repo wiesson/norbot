@@ -162,8 +162,8 @@ In the [Convex Dashboard](https://dashboard.convex.dev), add these environment v
 Also add to `.env.local`:
 
 ```env
-NEXT_PUBLIC_CONVEX_URL=https://YOUR_DEPLOYMENT.convex.cloud
-NEXT_PUBLIC_APP_URL=http://localhost:3000
+VITE_CONVEX_URL=https://YOUR_DEPLOYMENT.convex.cloud
+VITE_APP_URL=http://localhost:3000
 
 # Better Auth providers
 # GitHub OAuth (create at github.com/settings/developers)
@@ -200,14 +200,20 @@ Open [http://localhost:3000](http://localhost:3000)
 
 ```
 ├── src/
-│   ├── app/                    # Legacy Next pages reused by TanStack routes during migration
-│   │   ├── w/[slug]/          # Workspace dashboard + settings
-│   │   ├── invite/[token]/    # Invitation acceptance
-│   │   └── login/             # GitHub OAuth
+│   ├── routes/                  # TanStack Router file-based routes
+│   │   ├── __root.tsx           # Root layout + auth
+│   │   ├── bot.tsx              # Chat bot
+│   │   ├── invite/$token.tsx    # Invitation acceptance
+│   │   └── w/$slug/             # Workspace routes (dashboard, settings, invite, project board)
+│   ├── views/                   # Page-level view components
+│   │   ├── protected-pages.tsx  # Auth-gated views (home, setup, waiting, settings)
+│   │   └── landing-page.tsx     # Marketing landing page
+│   ├── styles/
+│   │   └── globals.css          # Tailwind/shadcn theme
 │   ├── components/
-│   │   ├── kanban/            # Kanban board
-│   │   └── ui/                # UI components
-│   └── hooks/                 # React hooks
+│   │   ├── kanban/              # Kanban board
+│   │   └── ui/                  # UI components
+│   └── hooks/                   # React hooks
 ├── convex/
 │   ├── agents/                # Norbot agent + tools
 │   │   ├── taskExtractor.ts   # Agent definition

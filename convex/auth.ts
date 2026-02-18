@@ -10,7 +10,7 @@ import authConfig from "./auth.config";
 
 export const authComponent = createClient<DataModel>(components.betterAuth as any);
 
-const appOrigin = "http://localhost:3000";
+const appOrigin = process.env.APP_URL || "http://localhost:3000";
 
 function deriveUsernameFromEmail(email: string): string {
   const [local = "user"] = email.toLowerCase().split("@");
@@ -87,6 +87,7 @@ async function sendMagicLinkEmail(email: string, url: string) {
 
 export const createAuth = (ctx: GenericCtx<DataModel>) =>
   betterAuth({
+    baseURL: appOrigin,
     database: authComponent.adapter(ctx),
     plugins: [
       crossDomain({
@@ -107,16 +108,6 @@ export const createAuth = (ctx: GenericCtx<DataModel>) =>
       google: {
         clientId: process.env.GOOGLE_CLIENT_ID!,
         clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
-      },
-    },
-    advanced: {
-      crossSubDomainCookies: {
-        enabled: true,
-      },
-      defaultCookieAttributes: {
-        secure: true,
-        sameSite: "none",
-        partitioned: true,
       },
     },
     trustedOrigins: [appOrigin],
