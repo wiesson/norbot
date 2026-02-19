@@ -2,29 +2,25 @@ import { createFileRoute, redirect } from "@tanstack/react-router";
 import { requireAuthWithUser } from "@/lib/route-auth";
 import { WaitingRoom } from "@/components/waiting-room";
 
-export const Route = createFileRoute("/onboarding")({
+export const Route = createFileRoute("/waiting")({
   beforeLoad: async ({ context }) => {
     const { user } = await requireAuthWithUser(context);
 
     if (user.workspaces?.length) {
       const slug = user.workspaces[0].slug;
-      throw redirect({
-        to: "/w/$slug",
-        params: { slug },
-      });
+      throw redirect({ to: "/w/$slug", params: { slug } });
     }
 
-    // Approved users without workspaces should go to setup wizard
     if (user.isApproved) {
       throw redirect({ to: "/setup", search: { step: undefined } });
     }
 
     return { user };
   },
-  component: OnboardingPage,
+  component: WaitingPage,
 });
 
-function OnboardingPage() {
+function WaitingPage() {
   const { user } = Route.useRouteContext();
   return <WaitingRoom user={user} />;
 }
