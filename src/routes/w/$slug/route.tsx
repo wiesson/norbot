@@ -28,9 +28,27 @@ export const Route = createFileRoute("/w/$slug")({
 function WorkspaceLayout() {
   const { slug } = Route.useParams();
   const { user } = Route.useRouteContext();
-  const workspace = useQuery(api.workspaces.getBySlug, { slug });
+  const workspaceFromMembership = user.workspaces?.find(
+    (ws: { slug?: string } | null) => ws?.slug === slug
+  );
+  const workspaceFromQuery = useQuery(api.workspaces.getBySlug, { slug });
+  const workspace = workspaceFromQuery ?? workspaceFromMembership;
 
-  if (workspace === null) {
+  if (!workspace && workspaceFromQuery === undefined) {
+    return (
+      <div className="min-h-screen bg-neutral-50 dark:bg-neutral-950">
+        <div className="container mx-auto px-4 py-8 max-w-2xl">
+          <Card>
+            <CardContent className="py-8 text-center space-y-2">
+              <div className="animate-pulse text-muted-foreground">Loading workspace...</div>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    );
+  }
+
+  if (!workspace) {
     return (
       <div className="min-h-screen bg-neutral-50 dark:bg-neutral-950">
         <div className="container mx-auto px-4 py-8 max-w-2xl">
