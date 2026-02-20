@@ -14,7 +14,7 @@
     "typecheck": "tsgo --noEmit"
   },
   "dependencies": {
-    "@ai-sdk/google": "^3.0.30",
+    "@ai-sdk/google": "^2.0.53",
     "@base-ui/react": "^1.2.0",
     "@convex-dev/agent": "^0.3.2",
     "@convex-dev/better-auth": "^0.10.10",

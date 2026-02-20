@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { Button } from "@/components/ui/button";
+import { redirectAuthenticatedToHome } from "@/lib/route-auth";
 import {
   Github,
   MessageCircle,
@@ -14,6 +15,9 @@ import {
 } from "lucide-react";
 
 export const Route = createFileRoute("/")({
+  beforeLoad: async ({ context }) => {
+    await redirectAuthenticatedToHome(context);
+  },
   component: LandingPage,
 });
 

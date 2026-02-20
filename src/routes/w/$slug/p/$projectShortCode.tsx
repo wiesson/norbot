@@ -45,13 +45,10 @@ function ProjectPage() {
     api.projects.list,
     workspace ? { workspaceId: workspace._id } : "skip"
   );
-  const selectedProject = useQuery(
-    api.projects.getByShortCode,
-    workspace && !isAllProjects
-      ? { workspaceId: workspace._id, shortCode: projectShortCode }
-      : "skip"
-  );
   const projects = projectList ?? [];
+  const selectedProject = isAllProjects
+    ? undefined
+    : projects.find((project) => project.shortCode.toLowerCase() === projectShortCode.toLowerCase());
 
   const selectedRepositoryId =
     repoFilter && repositories?.some((repo) => repo._id === repoFilter)
@@ -70,7 +67,7 @@ function ProjectPage() {
     router.history.push(query ? `${pathname}?${query}` : pathname);
   };
 
-  if (!workspace || (!isAllProjects && selectedProject === undefined)) {
+  if (!workspace || projectList === undefined) {
     return (
       <div className="py-12 flex items-center justify-center">
         <div className="animate-pulse text-muted-foreground">Loading...</div>
@@ -78,7 +75,7 @@ function ProjectPage() {
     );
   }
 
-  if (!isAllProjects && selectedProject === null) {
+  if (!isAllProjects && !selectedProject) {
     return (
       <div className="container mx-auto px-4 py-8 max-w-2xl">
         <Link
