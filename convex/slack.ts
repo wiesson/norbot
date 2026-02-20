@@ -469,6 +469,31 @@ export const handleAppMention = internalAction({
       return;
     }
 
+    // Handle stop command — stop following this thread
+    if (/^(stop|stopp|halt)$/i.test(cleanText)) {
+      const existingConvo = await ctx.runQuery(internal.slack.getAgentConversation, {
+        workspaceId: workspace._id,
+        slackChannelId: args.channelId,
+        slackThreadTs: args.threadTs,
+      });
+      if (existingConvo) {
+        await ctx.runMutation(internal.slack.upsertAgentConversation, {
+          workspaceId: workspace._id,
+          slackChannelId: args.channelId,
+          slackThreadTs: args.threadTs,
+          agentThreadId: existingConvo.agentThreadId,
+          status: "stopped",
+        });
+      }
+      await sendSlackMessage({
+        token: workspace.slackBotToken ?? "",
+        channelId: args.channelId,
+        threadTs: args.threadTs,
+        text: "Ok, I'll stop following this thread. Mention me again to resume.",
+      });
+      return;
+    }
+
     // Download any attached files from Slack
     let attachments: Array<{
       storageId: string;
@@ -585,13 +610,28 @@ export const handleAppMention = internalAction({
       };
 
       // Build context for the agent with all required parameters for tools
-      const contextInfo = `Context (use these values when calling tools):
+      const contextInfo = `## Tool parameters
 - source: ${JSON.stringify(sourceContext)}
-- channelName: ${channelMapping?.slackChannelName || "unknown"}${channelProjectInfo}${repoInfo}${attachmentsInfo}${projectsInfo}${threadContext}
-
-User message: ${cleanText}
+- channelName: ${channelMapping?.slackChannelName || "unknown"}${channelProjectInfo}${repoInfo}${attachmentsInfo}${projectsInfo}
+${threadContext}
+## User message
+${cleanText}
 
 Original text for task creation: ${originalText}`;
+
+      // Save conversation BEFORE agent call so follow-ups work even if the agent fails
+      await ctx.runMutation(internal.slack.upsertAgentConversation, {
+        workspaceId: workspace._id,
+        slackChannelId: args.channelId,
+        slackThreadTs: args.threadTs,
+        agentThreadId: threadId,
+        status: "active",
+        originalText,
+        originalMessageTs,
+        originalAttachments: storedAttachments,
+        lastUserText: cleanText,
+        lastUserMessageTs: args.ts,
+      });
 
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const result = await norbotAgent.generateText(ctx, { threadId }, {
@@ -605,30 +645,13 @@ Original text for task creation: ${originalText}`;
       });
 
       // Send the agent's response directly
-      // The agent handles everything: greetings, summaries, status updates, assignments, task creation
-      const responseText =
-        result.text ||
-        "I didn't quite understand that. Could you provide more details?\n• What were you trying to do?\n• What happened instead?\n• Any error messages?";
+      const responseText = result.text || getFallbackMessage();
 
       await sendSlackMessage({
         token: workspace.slackBotToken ?? "",
         channelId: args.channelId,
         threadTs: args.threadTs,
         text: responseText,
-      });
-
-      // Save conversation for thread continuity (so we can respond to follow-ups)
-      await ctx.runMutation(internal.slack.upsertAgentConversation, {
-        workspaceId: workspace._id,
-        slackChannelId: args.channelId,
-        slackThreadTs: args.threadTs,
-        agentThreadId: threadId,
-        status: "active",
-        originalText,
-        originalMessageTs,
-        originalAttachments: storedAttachments,
-        lastUserText: cleanText,
-        lastUserMessageTs: args.ts,
       });
     } catch (error) {
       console.error("Agent error:", error);
@@ -654,6 +677,18 @@ export const handleThreadReply = internalAction({
     threadTs: v.string(),
   },
   handler: async (ctx, args) => {
+    // Deduplication: Check if we already processed this event
+    const alreadyProcessed = await ctx.runQuery(internal.slack.isEventProcessed, {
+      eventTs: args.ts,
+    });
+    if (alreadyProcessed) return;
+
+    const marked = await ctx.runMutation(internal.slack.markEventProcessed, {
+      eventTs: args.ts,
+      eventType: "thread_reply",
+    });
+    if (!marked) return;
+
     // Get workspace
     const workspace = await ctx.runQuery(internal.slack.getWorkspaceBySlackTeam, {
       slackTeamId: args.teamId,
@@ -668,8 +703,8 @@ export const handleThreadReply = internalAction({
       slackThreadTs: args.threadTs,
     });
 
-    if (conversation && conversation.status === "active") {
-      // Continue the agent conversation
+    if (conversation && conversation.status !== "stopped") {
+      // Continue the agent conversation (reuse thread if active, create new if not)
       try {
         // Check AI usage limits
         const usageCheck = await ctx.runQuery(internal.ai.checkUsageInternal, {
@@ -773,19 +808,24 @@ export const handleThreadReply = internalAction({
         }
 
         // Build context for follow-up with full context
-        const contextInfo = `Context (use these values when calling tools):
+        const contextInfo = `## Tool parameters
 - source: ${JSON.stringify(sourceContext)}
-- channelName: ${channelMapping?.slackChannelName || "unknown"}${channelProjectInfo}${repoInfo}${attachmentsInfo}${projectsInfo}${threadContext}
-
-User follow-up message: ${args.text}
+- channelName: ${channelMapping?.slackChannelName || "unknown"}${channelProjectInfo}${repoInfo}${attachmentsInfo}${projectsInfo}
+${threadContext}
+## User follow-up message
+${args.text}
 
 Original text for task creation: ${originalText}`;
 
-        // Continue on the existing agent thread
+        // Reuse agent thread if active, otherwise create new one
+        const threadId = conversation.status === "active"
+          ? conversation.agentThreadId
+          : (await norbotAgent.createThread(ctx, {})).threadId;
+
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const result = await norbotAgent.generateText(
           ctx,
-          { threadId: conversation.agentThreadId },
+          { threadId },
           {
             messages: [{ role: "user" as const, content: contextInfo }],
             maxSteps: 5,
@@ -798,7 +838,7 @@ Original text for task creation: ${originalText}`;
         });
 
         const responseText =
-          result.text || "I'm not sure how to help with that. Could you clarify?";
+          result.text || getFallbackMessage();
 
         await sendSlackMessage({
           token: workspace.slackBotToken ?? "",
@@ -812,7 +852,7 @@ Original text for task creation: ${originalText}`;
           workspaceId: workspace._id,
           slackChannelId: args.channelId,
           slackThreadTs: args.threadTs,
-          agentThreadId: conversation.agentThreadId,
+          agentThreadId: threadId,
           status: "active",
           originalText,
           originalMessageTs,
@@ -953,6 +993,11 @@ async function sendSlackMessage(params: {
   return data;
 }
 
+// Fallback when agent returns empty response
+function getFallbackMessage(): string {
+  return "I didn't quite understand that. Could you describe what you'd like me to do in a bit more detail?";
+}
+
 // Fetch all replies in a thread from Slack
 interface SlackThreadMessage {
   ts: string;
@@ -996,9 +1041,7 @@ function formatThreadForContext(
   currentTs: string
 ): string {
   // Filter out the current message, keep bot messages for conversation context
-  const relevantMessages = messages
-    .filter((m) => m.ts !== currentTs)
-    .slice(-15);
+  const relevantMessages = messages.filter((m) => m.ts !== currentTs);
 
   if (relevantMessages.length === 0) {
     return "";
@@ -1011,11 +1054,7 @@ function formatThreadForContext(
       : `<@${m.user}>: ${m.text}`)
     .join("\n");
 
-  // Cap at ~2000 chars to avoid token bloat
-  const truncated =
-    formatted.length > 2000 ? formatted.slice(-2000) + "\n[...truncated]" : formatted;
-
-  return `\n\nThread context (previous messages in this thread):\n${truncated}`;
+  return `\n## Thread context (previous messages in this thread — use this to understand what the user is referring to)\n${formatted}`;
 }
 
 // ===========================================
@@ -1457,7 +1496,7 @@ export const upsertAgentConversation = internalMutation({
     slackChannelId: v.string(),
     slackThreadTs: v.string(),
     agentThreadId: v.string(),
-    status: v.union(v.literal("active"), v.literal("completed")),
+    status: v.union(v.literal("active"), v.literal("completed"), v.literal("stopped")),
     originalText: v.optional(v.string()),
     originalMessageTs: v.optional(v.string()),
     originalAttachments: v.optional(
@@ -1689,6 +1728,18 @@ export const handleAssistantMessage = internalAction({
     threadTs: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
+    // Deduplication: Check if we already processed this event
+    const alreadyProcessed = await ctx.runQuery(internal.slack.isEventProcessed, {
+      eventTs: args.ts,
+    });
+    if (alreadyProcessed) return;
+
+    const marked = await ctx.runMutation(internal.slack.markEventProcessed, {
+      eventTs: args.ts,
+      eventType: "assistant_message",
+    });
+    if (!marked) return;
+
     const workspace = await ctx.runQuery(internal.slack.getWorkspaceBySlackTeam, {
       slackTeamId: args.teamId,
     });
@@ -1814,11 +1865,12 @@ export const handleAssistantMessage = internalAction({
         channelProjectInfo = "\n- channelDefaultProject: none - Use keyword matching or ask which project";
       }
 
-      const contextInfo = `Context (use these values when calling tools):
+      const contextInfo = `## Tool parameters
 - source: ${JSON.stringify(sourceContext)}
-- channelName: ${channelMapping?.slackChannelName || "unknown"}${channelProjectInfo}${repoInfo}${projectsInfo}${threadContext}
-
-User message: ${args.text}
+- channelName: ${channelMapping?.slackChannelName || "unknown"}${channelProjectInfo}${repoInfo}${projectsInfo}
+${threadContext}
+## User message
+${args.text}
 
 Original text for task creation: ${originalText}`;
 
@@ -1833,7 +1885,7 @@ Original text for task creation: ${originalText}`;
       });
 
       const responseText =
-        result.text || "I'm not sure how to help with that. Could you clarify?";
+        result.text || getFallbackMessage();
 
       await sendSlackMessage({
         token: workspace.slackBotToken ?? "",
