@@ -19,6 +19,7 @@ import { Route as LoginRouteImport } from './routes/login'
 import { Route as BotRouteImport } from './routes/bot'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as InviteTokenRouteImport } from './routes/invite/$token'
+import { Route as WSlugRouteRouteImport } from './routes/w/$slug/route'
 import { Route as WSlugIndexRouteImport } from './routes/w/$slug/index'
 import { Route as WSlugSettingsRouteImport } from './routes/w/$slug/settings'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
@@ -74,15 +75,20 @@ const InviteTokenRoute = InviteTokenRouteImport.update({
   path: '/invite/$token',
   getParentRoute: () => rootRouteImport,
 } as any)
-const WSlugIndexRoute = WSlugIndexRouteImport.update({
-  id: '/w/$slug/',
-  path: '/w/$slug/',
+const WSlugRouteRoute = WSlugRouteRouteImport.update({
+  id: '/w/$slug',
+  path: '/w/$slug',
   getParentRoute: () => rootRouteImport,
 } as any)
+const WSlugIndexRoute = WSlugIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => WSlugRouteRoute,
+} as any)
 const WSlugSettingsRoute = WSlugSettingsRouteImport.update({
-  id: '/w/$slug/settings',
-  path: '/w/$slug/settings',
-  getParentRoute: () => rootRouteImport,
+  id: '/settings',
+  path: '/settings',
+  getParentRoute: () => WSlugRouteRoute,
 } as any)
 const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
   id: '/api/auth/$',
@@ -90,9 +96,9 @@ const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
   getParentRoute: () => rootRouteImport,
 } as any)
 const WSlugPProjectShortCodeRoute = WSlugPProjectShortCodeRouteImport.update({
-  id: '/w/$slug/p/$projectShortCode',
-  path: '/w/$slug/p/$projectShortCode',
-  getParentRoute: () => rootRouteImport,
+  id: '/p/$projectShortCode',
+  path: '/p/$projectShortCode',
+  getParentRoute: () => WSlugRouteRoute,
 } as any)
 
 export interface FileRoutesByFullPath {
@@ -105,6 +111,7 @@ export interface FileRoutesByFullPath {
   '/setup': typeof SetupRoute
   '/signup': typeof SignupRoute
   '/waiting': typeof WaitingRoute
+  '/w/$slug': typeof WSlugRouteRouteWithChildren
   '/invite/$token': typeof InviteTokenRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/w/$slug/settings': typeof WSlugSettingsRoute
@@ -138,6 +145,7 @@ export interface FileRoutesById {
   '/setup': typeof SetupRoute
   '/signup': typeof SignupRoute
   '/waiting': typeof WaitingRoute
+  '/w/$slug': typeof WSlugRouteRouteWithChildren
   '/invite/$token': typeof InviteTokenRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/w/$slug/settings': typeof WSlugSettingsRoute
@@ -156,6 +164,7 @@ export interface FileRouteTypes {
     | '/setup'
     | '/signup'
     | '/waiting'
+    | '/w/$slug'
     | '/invite/$token'
     | '/api/auth/$'
     | '/w/$slug/settings'
@@ -188,6 +197,7 @@ export interface FileRouteTypes {
     | '/setup'
     | '/signup'
     | '/waiting'
+    | '/w/$slug'
     | '/invite/$token'
     | '/api/auth/$'
     | '/w/$slug/settings'
@@ -205,11 +215,9 @@ export interface RootRouteChildren {
   SetupRoute: typeof SetupRoute
   SignupRoute: typeof SignupRoute
   WaitingRoute: typeof WaitingRoute
+  WSlugRouteRoute: typeof WSlugRouteRouteWithChildren
   InviteTokenRoute: typeof InviteTokenRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
-  WSlugSettingsRoute: typeof WSlugSettingsRoute
-  WSlugIndexRoute: typeof WSlugIndexRoute
-  WSlugPProjectShortCodeRoute: typeof WSlugPProjectShortCodeRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -284,19 +292,26 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof InviteTokenRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/w/$slug': {
+      id: '/w/$slug'
+      path: '/w/$slug'
+      fullPath: '/w/$slug'
+      preLoaderRoute: typeof WSlugRouteRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/w/$slug/': {
       id: '/w/$slug/'
-      path: '/w/$slug'
+      path: '/'
       fullPath: '/w/$slug/'
       preLoaderRoute: typeof WSlugIndexRouteImport
-      parentRoute: typeof rootRouteImport
+      parentRoute: typeof WSlugRouteRoute
     }
     '/w/$slug/settings': {
       id: '/w/$slug/settings'
-      path: '/w/$slug/settings'
+      path: '/settings'
       fullPath: '/w/$slug/settings'
       preLoaderRoute: typeof WSlugSettingsRouteImport
-      parentRoute: typeof rootRouteImport
+      parentRoute: typeof WSlugRouteRoute
     }
     '/api/auth/$': {
       id: '/api/auth/$'
@@ -307,13 +322,29 @@ declare module '@tanstack/react-router' {
     }
     '/w/$slug/p/$projectShortCode': {
       id: '/w/$slug/p/$projectShortCode'
-      path: '/w/$slug/p/$projectShortCode'
+      path: '/p/$projectShortCode'
       fullPath: '/w/$slug/p/$projectShortCode'
       preLoaderRoute: typeof WSlugPProjectShortCodeRouteImport
-      parentRoute: typeof rootRouteImport
+      parentRoute: typeof WSlugRouteRoute
     }
   }
 }
+
+interface WSlugRouteRouteChildren {
+  WSlugSettingsRoute: typeof WSlugSettingsRoute
+  WSlugIndexRoute: typeof WSlugIndexRoute
+  WSlugPProjectShortCodeRoute: typeof WSlugPProjectShortCodeRoute
+}
+
+const WSlugRouteRouteChildren: WSlugRouteRouteChildren = {
+  WSlugSettingsRoute: WSlugSettingsRoute,
+  WSlugIndexRoute: WSlugIndexRoute,
+  WSlugPProjectShortCodeRoute: WSlugPProjectShortCodeRoute,
+}
+
+const WSlugRouteRouteWithChildren = WSlugRouteRoute._addFileChildren(
+  WSlugRouteRouteChildren,
+)
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
@@ -325,11 +356,9 @@ const rootRouteChildren: RootRouteChildren = {
   SetupRoute: SetupRoute,
   SignupRoute: SignupRoute,
   WaitingRoute: WaitingRoute,
+  WSlugRouteRoute: WSlugRouteRouteWithChildren,
   InviteTokenRoute: InviteTokenRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
-  WSlugSettingsRoute: WSlugSettingsRoute,
-  WSlugIndexRoute: WSlugIndexRoute,
-  WSlugPProjectShortCodeRoute: WSlugPProjectShortCodeRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

@@ -42,35 +42,25 @@ import { ArrowLeft, Slack, Trash2, UserMinus, Lock, Globe, Plus, FolderGit2, Use
 import { ApiKeysSection } from "@/components/settings/api-keys-section";
 import type { Doc, Id } from "@convex/_generated/dataModel";
 import { RepoSelector, type Repo } from "@/components/repo-selector";
-import { requireApprovedUser, getViewer } from "@/lib/route-auth";
+import { getViewer } from "@/lib/route-auth";
+import { useWorkspace } from "./route";
 
 type Priority = "critical" | "high" | "medium" | "low";
 type Role = "admin" | "member" | "viewer";
 
 export const Route = createFileRoute("/w/$slug/settings")({
-  beforeLoad: async ({ context }) => {
-    return await requireApprovedUser(context);
-  },
   component: WorkspaceSettingsPage,
 });
 
 function WorkspaceSettingsPage() {
   const { slug } = Route.useParams();
   const { user } = Route.useRouteContext();
-  const workspace = useQuery(api.workspaces.getBySlug, { slug });
+  const workspace = useWorkspace();
 
-  if (workspace === undefined) {
+  if (!workspace) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="py-12 flex items-center justify-center">
         <div className="animate-pulse text-muted-foreground">Loading...</div>
-      </div>
-    );
-  }
-
-  if (workspace === null) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-muted-foreground">Workspace not found.</div>
       </div>
     );
   }
@@ -349,8 +339,7 @@ function WorkspaceSettingsForm({
   };
 
   return (
-    <div className="min-h-screen bg-neutral-50 dark:bg-neutral-950">
-      <div className="container mx-auto px-4 py-8 max-w-2xl">
+    <div className="container mx-auto px-4 py-8 max-w-2xl">
         <a
           href={`/w/${slug}`}
           className={cn(buttonVariants({ variant: "ghost", size: "sm" }), "mb-6")}
@@ -873,6 +862,5 @@ function WorkspaceSettingsForm({
           </Card>
         )}
       </div>
-    </div>
   );
 }
