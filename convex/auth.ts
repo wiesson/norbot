@@ -9,9 +9,9 @@ import authConfig from "./auth.config";
 
 export const authComponent = createClient<DataModel>(components.betterAuth as any);
 
-const appOrigin = process.env.SITE_URL || process.env.APP_URL;
+const appOrigin = process.env.APP_URL;
 if (!appOrigin) {
-  throw new Error("Missing SITE_URL or APP_URL environment variable");
+  throw new Error("Missing APP_URL environment variable");
 }
 
 async function getUserWithWorkspaces(

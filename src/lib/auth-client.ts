@@ -8,7 +8,7 @@ import {
 const authBaseUrl =
   typeof window !== "undefined"
     ? window.location.origin
-    : import.meta.env.VITE_SITE_URL || import.meta.env.VITE_APP_URL;
+    : import.meta.env.VITE_APP_URL;
 
 export const authClient = createAuthClient({
   ...(authBaseUrl ? { baseURL: authBaseUrl } : {}),
