@@ -1,7 +1,7 @@
 import { betterAuth } from "better-auth";
 import { magicLink } from "better-auth/plugins";
 import { createClient, type GenericCtx } from "@convex-dev/better-auth";
-import { convex, crossDomain } from "@convex-dev/better-auth/plugins";
+import { convex } from "@convex-dev/better-auth/plugins";
 import { components } from "./_generated/api";
 import type { DataModel, Id } from "./_generated/dataModel";
 import { mutation, query } from "./_generated/server";
@@ -72,9 +72,6 @@ export const createAuth = (ctx: GenericCtx<DataModel>) =>
     baseURL: appOrigin,
     database: authComponent.adapter(ctx),
     plugins: [
-      crossDomain({
-        siteUrl: appOrigin,
-      }),
       convex({ authConfig }),
       magicLink({
         sendMagicLink: async ({ email, url }) => {

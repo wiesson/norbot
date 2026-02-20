@@ -13,19 +13,21 @@ export async function redirectAuthenticatedToHome(
   context: { isAuthenticated: boolean },
   redirectTo?: string
 ) {
-  if (context.isAuthenticated) {
-    const user = await ensureViewer();
-    if (user) {
-      if (redirectTo) {
-        throw redirect({ to: redirectTo as any });
-      }
-      if (user.workspaces?.length) {
-        const slug = user.workspaces[0].slug;
-        throw redirect({ to: "/w/$slug", params: { slug } });
-      }
-      throw redirect({ to: "/onboarding" });
-    }
+  if (!context.isAuthenticated) return;
+
+  if (redirectTo) {
+    throw redirect({ to: redirectTo as any });
   }
+
+  const user = await ensureViewer();
+
+  if (user?.workspaces?.length) {
+    const slug = user.workspaces[0].slug;
+    throw redirect({ to: "/w/$slug", params: { slug } });
+  }
+
+  // Always redirect — even if ensureViewer() returned null
+  throw redirect({ to: "/onboarding" });
 }
 
 export const getViewer = createServerFn({ method: "GET" }).handler(async () => {
@@ -41,7 +43,8 @@ export const ensureViewer = createServerFn({ method: "GET" }).handler(
 
     try {
       await fetchAuthMutation(api.auth.syncUser, {});
-    } catch {
+    } catch (error) {
+      console.error("[ensureViewer] syncUser failed:", error);
       return null;
     }
 

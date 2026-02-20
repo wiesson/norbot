@@ -1,21 +1,20 @@
 import { createFileRoute, redirect } from "@tanstack/react-router";
-import { requireAuthWithUser } from "@/lib/route-auth";
+import { requireAuth, ensureViewer } from "@/lib/route-auth";
 import { WaitingRoom } from "@/components/waiting-room";
+import { Button } from "@/components/ui/button";
+import { Loader2 } from "lucide-react";
 
 export const Route = createFileRoute("/onboarding")({
   beforeLoad: async ({ context }) => {
-    const { user } = await requireAuthWithUser(context);
+    requireAuth(context);
+    const user = await ensureViewer();
 
-    if (user.workspaces?.length) {
+    if (user?.workspaces?.length) {
       const slug = user.workspaces[0].slug;
-      throw redirect({
-        to: "/w/$slug",
-        params: { slug },
-      });
+      throw redirect({ to: "/w/$slug", params: { slug } });
     }
 
-    // Approved users without workspaces should go to setup wizard
-    if (user.isApproved) {
+    if (user?.isApproved) {
       throw redirect({ to: "/setup", search: { step: undefined } });
     }
 
@@ -26,5 +25,23 @@ export const Route = createFileRoute("/onboarding")({
 
 function OnboardingPage() {
   const { user } = Route.useRouteContext();
+
+  if (!user) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-neutral-50 dark:bg-neutral-950">
+        <div className="text-center space-y-4">
+          <Loader2 className="h-8 w-8 animate-spin mx-auto text-muted-foreground" />
+          <p className="text-muted-foreground">Setting up your account...</p>
+          <Button
+            variant="outline"
+            onClick={() => window.location.reload()}
+          >
+            Retry
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
   return <WaitingRoom user={user} />;
 }
