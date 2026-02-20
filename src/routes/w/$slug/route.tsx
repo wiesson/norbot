@@ -1,4 +1,4 @@
-import { createFileRoute, Outlet } from "@tanstack/react-router";
+import { Link, createFileRoute, Outlet } from "@tanstack/react-router";
 import { createContext, useContext } from "react";
 import { useQuery } from "convex/react";
 import { api } from "@convex/_generated/api";
@@ -70,24 +70,25 @@ function WorkspaceLayout() {
       <div className="min-h-screen bg-neutral-50 dark:bg-neutral-950">
         <header className="border-b bg-white dark:bg-neutral-900 sticky top-0 z-10">
           <div className="container mx-auto px-4 py-3 flex items-center justify-between">
-            <a href={`/w/${slug}`}>
+            <Link to="/w/$slug" params={{ slug }}>
               <div>
                 <h1 className="text-lg font-bold">
                   {workspace?.name ?? slug}
                 </h1>
                 <p className="text-xs text-muted-foreground">/{slug}</p>
               </div>
-            </a>
+            </Link>
 
             <div className="flex items-center gap-4">
-              <a
-                href={`/w/${slug}/settings`}
+              <Link
+                to="/w/$slug/settings"
+                params={{ slug }}
                 className={cn(
                   buttonVariants({ variant: "ghost", size: "icon" })
                 )}
               >
                 <Settings className="h-5 w-5" />
-              </a>
+              </Link>
               <div className="flex items-center gap-2">
                 <Avatar className="h-8 w-8">
                   <AvatarImage src={user.avatarUrl} alt={user.name} />

@@ -22,6 +22,7 @@ import { Route as InviteTokenRouteImport } from './routes/invite/$token'
 import { Route as WSlugRouteRouteImport } from './routes/w/$slug/route'
 import { Route as WSlugIndexRouteImport } from './routes/w/$slug/index'
 import { Route as WSlugSettingsRouteImport } from './routes/w/$slug/settings'
+import { Route as WSlugInviteRouteImport } from './routes/w/$slug/invite'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
 import { Route as WSlugPProjectShortCodeRouteImport } from './routes/w/$slug/p/$projectShortCode'
 
@@ -90,6 +91,11 @@ const WSlugSettingsRoute = WSlugSettingsRouteImport.update({
   path: '/settings',
   getParentRoute: () => WSlugRouteRoute,
 } as any)
+const WSlugInviteRoute = WSlugInviteRouteImport.update({
+  id: '/invite',
+  path: '/invite',
+  getParentRoute: () => WSlugRouteRoute,
+} as any)
 const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
   id: '/api/auth/$',
   path: '/api/auth/$',
@@ -114,6 +120,7 @@ export interface FileRoutesByFullPath {
   '/w/$slug': typeof WSlugRouteRouteWithChildren
   '/invite/$token': typeof InviteTokenRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/w/$slug/invite': typeof WSlugInviteRoute
   '/w/$slug/settings': typeof WSlugSettingsRoute
   '/w/$slug/': typeof WSlugIndexRoute
   '/w/$slug/p/$projectShortCode': typeof WSlugPProjectShortCodeRoute
@@ -130,6 +137,7 @@ export interface FileRoutesByTo {
   '/waiting': typeof WaitingRoute
   '/invite/$token': typeof InviteTokenRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/w/$slug/invite': typeof WSlugInviteRoute
   '/w/$slug/settings': typeof WSlugSettingsRoute
   '/w/$slug': typeof WSlugIndexRoute
   '/w/$slug/p/$projectShortCode': typeof WSlugPProjectShortCodeRoute
@@ -148,6 +156,7 @@ export interface FileRoutesById {
   '/w/$slug': typeof WSlugRouteRouteWithChildren
   '/invite/$token': typeof InviteTokenRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/w/$slug/invite': typeof WSlugInviteRoute
   '/w/$slug/settings': typeof WSlugSettingsRoute
   '/w/$slug/': typeof WSlugIndexRoute
   '/w/$slug/p/$projectShortCode': typeof WSlugPProjectShortCodeRoute
@@ -167,6 +176,7 @@ export interface FileRouteTypes {
     | '/w/$slug'
     | '/invite/$token'
     | '/api/auth/$'
+    | '/w/$slug/invite'
     | '/w/$slug/settings'
     | '/w/$slug/'
     | '/w/$slug/p/$projectShortCode'
@@ -183,6 +193,7 @@ export interface FileRouteTypes {
     | '/waiting'
     | '/invite/$token'
     | '/api/auth/$'
+    | '/w/$slug/invite'
     | '/w/$slug/settings'
     | '/w/$slug'
     | '/w/$slug/p/$projectShortCode'
@@ -200,6 +211,7 @@ export interface FileRouteTypes {
     | '/w/$slug'
     | '/invite/$token'
     | '/api/auth/$'
+    | '/w/$slug/invite'
     | '/w/$slug/settings'
     | '/w/$slug/'
     | '/w/$slug/p/$projectShortCode'
@@ -313,6 +325,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof WSlugSettingsRouteImport
       parentRoute: typeof WSlugRouteRoute
     }
+    '/w/$slug/invite': {
+      id: '/w/$slug/invite'
+      path: '/invite'
+      fullPath: '/w/$slug/invite'
+      preLoaderRoute: typeof WSlugInviteRouteImport
+      parentRoute: typeof WSlugRouteRoute
+    }
     '/api/auth/$': {
       id: '/api/auth/$'
       path: '/api/auth/$'
@@ -331,12 +350,14 @@ declare module '@tanstack/react-router' {
 }
 
 interface WSlugRouteRouteChildren {
+  WSlugInviteRoute: typeof WSlugInviteRoute
   WSlugSettingsRoute: typeof WSlugSettingsRoute
   WSlugIndexRoute: typeof WSlugIndexRoute
   WSlugPProjectShortCodeRoute: typeof WSlugPProjectShortCodeRoute
 }
 
 const WSlugRouteRouteChildren: WSlugRouteRouteChildren = {
+  WSlugInviteRoute: WSlugInviteRoute,
   WSlugSettingsRoute: WSlugSettingsRoute,
   WSlugIndexRoute: WSlugIndexRoute,
   WSlugPProjectShortCodeRoute: WSlugPProjectShortCodeRoute,

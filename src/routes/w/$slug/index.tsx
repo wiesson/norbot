@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { Link, createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "convex/react";
 import { api } from "@convex/_generated/api";
 import { Badge } from "@/components/ui/badge";
@@ -44,7 +44,7 @@ function WorkspacePage() {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-          <a href={`/w/${slug}/p/all`}>
+          <Link to="/w/$slug/p/$projectShortCode" params={{ slug, projectShortCode: "all" }}>
             <Card className="hover:border-primary transition-colors h-full">
               <CardHeader>
                 <CardTitle className="flex items-center justify-between">
@@ -57,10 +57,14 @@ function WorkspacePage() {
                 <Badge variant="secondary">ALL</Badge>
               </CardContent>
             </Card>
-          </a>
+          </Link>
 
           {projects?.map((project) => (
-            <a key={project._id} href={`/w/${slug}/p/${project.shortCode}`}>
+            <Link
+              key={project._id}
+              to="/w/$slug/p/$projectShortCode"
+              params={{ slug, projectShortCode: project.shortCode }}
+            >
               <Card className="hover:border-primary transition-colors h-full">
                 <CardHeader>
                   <CardTitle className="flex items-center justify-between">
@@ -76,7 +80,7 @@ function WorkspacePage() {
                   <FolderKanban className="h-4 w-4 text-muted-foreground" />
                 </CardContent>
               </Card>
-            </a>
+            </Link>
           ))}
         </div>
 

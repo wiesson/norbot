@@ -1,8 +1,7 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { Link, createFileRoute, useRouter } from "@tanstack/react-router";
 import { useState } from "react";
 import { useQuery, useMutation, useAction } from "convex/react";
 import { api } from "@convex/_generated/api";
-import { useRouter } from "@tanstack/react-router";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button, buttonVariants } from "@/components/ui/button";
@@ -585,12 +584,12 @@ function WorkspaceSettingsForm({
           <CardHeader className="flex flex-row items-center justify-between">
             <CardTitle>Members</CardTitle>
             {isAdmin && (
-              <a href={`/w/${slug}/invite`}>
+              <Link to="/w/$slug/invite" params={{ slug }}>
                 <Button variant="outline" size="sm">
                   <UserPlus className="h-4 w-4 mr-2" />
                   Invite
                 </Button>
-              </a>
+              </Link>
             )}
           </CardHeader>
           <CardContent>

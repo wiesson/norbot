@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useMemo } from "react";
 import { useQuery } from "convex/react";
 import { api } from "@convex/_generated/api";
-import { useRouter, useRouterState } from "@tanstack/react-router";
+import { Link, useRouter, useRouterState } from "@tanstack/react-router";
 import { KanbanBoard } from "@/components/kanban/kanban-board";
 import { buttonVariants } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -81,13 +81,14 @@ function ProjectPage() {
   if (!isAllProjects && selectedProject === null) {
     return (
       <div className="container mx-auto px-4 py-8 max-w-2xl">
-        <a
-          href={`/w/${slug}`}
+        <Link
+          to="/w/$slug"
+          params={{ slug }}
           className={cn(buttonVariants({ variant: "ghost", size: "sm" }), "mb-6")}
         >
           <ChevronLeft className="mr-2 h-4 w-4" />
           Back to Projects
-        </a>
+        </Link>
         <Card>
           <CardContent className="py-8 text-center space-y-2">
             <p className="font-medium">Project not found</p>
@@ -105,12 +106,13 @@ function ProjectPage() {
       <div className="border-b bg-white dark:bg-neutral-900">
         <div className="container mx-auto px-4 py-2 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <a
-              href={`/w/${slug}`}
+            <Link
+              to="/w/$slug"
+              params={{ slug }}
               className={cn(buttonVariants({ variant: "ghost", size: "icon" }))}
             >
               <ChevronLeft className="h-5 w-5" />
-            </a>
+            </Link>
             <div className="flex items-center gap-2">
               <Badge>{isAllProjects ? "ALL" : selectedProject?.shortCode}</Badge>
               <span className="text-sm text-muted-foreground">
@@ -121,20 +123,25 @@ function ProjectPage() {
 
           <div className="flex items-center gap-4">
             <div className="hidden lg:flex gap-1">
-              <a href={`/w/${slug}/p/all`} className={buttonVariants({ size: "sm", variant: isAllProjects ? "default" : "outline" })}>
+              <Link
+                to="/w/$slug/p/$projectShortCode"
+                params={{ slug, projectShortCode: "all" }}
+                className={buttonVariants({ size: "sm", variant: isAllProjects ? "default" : "outline" })}
+              >
                 All
-              </a>
+              </Link>
               {projects.map((project) => (
-                <a
+                <Link
                   key={project._id}
-                  href={`/w/${slug}/p/${project.shortCode}`}
+                  to="/w/$slug/p/$projectShortCode"
+                  params={{ slug, projectShortCode: project.shortCode }}
                   className={buttonVariants({
                     size: "sm",
                     variant: !isAllProjects && selectedProject?._id === project._id ? "default" : "outline",
                   })}
                 >
                   {project.shortCode}
-                </a>
+                </Link>
               ))}
             </div>
 
