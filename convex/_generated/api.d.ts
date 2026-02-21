@@ -13,6 +13,7 @@ import type * as agents_tools from "../agents/tools.js";
 import type * as ai from "../ai.js";
 import type * as apiKeys from "../apiKeys.js";
 import type * as auth from "../auth.js";
+import type * as authFunctions from "../authFunctions.js";
 import type * as channelMappings from "../channelMappings.js";
 import type * as github from "../github.js";
 import type * as http from "../http.js";
@@ -39,6 +40,7 @@ declare const fullApi: ApiFromModules<{
   ai: typeof ai;
   apiKeys: typeof apiKeys;
   auth: typeof auth;
+  authFunctions: typeof authFunctions;
   channelMappings: typeof channelMappings;
   github: typeof github;
   http: typeof http;

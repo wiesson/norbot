@@ -17,7 +17,7 @@ import { authClient } from "@/lib/auth-client";
 import { redirectAuthenticatedToHome } from "@/lib/route-auth";
 
 const getProviders = createServerFn({ method: "GET" }).handler(async () => {
-  return await fetchAuthQuery(api.auth.providersStatus, {});
+  return await fetchAuthQuery(api.authFunctions.providersStatus, {});
 });
 
 export const Route = createFileRoute("/login")({

@@ -34,6 +34,14 @@ function WorkspaceLayout() {
   const workspaceFromQuery = useQuery(api.workspaces.getBySlug, { slug });
   const workspace = workspaceFromQuery ?? workspaceFromMembership;
 
+  console.log('[ws]', {
+    slug,
+    workspaceFromMembership: !!workspaceFromMembership,
+    workspaceFromQuery,
+    workspace: !!workspace,
+    queryIsUndefined: workspaceFromQuery === undefined,
+  });
+
   if (!workspace && workspaceFromQuery === undefined) {
     return (
       <div className="min-h-screen bg-neutral-50 dark:bg-neutral-950">

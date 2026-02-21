@@ -31,24 +31,24 @@ export async function redirectAuthenticatedToHome(
 }
 
 export const getViewer = createServerFn({ method: "GET" }).handler(async () => {
-  return await fetchAuthQuery(api.auth.viewer, {});
+  return await fetchAuthQuery(api.authFunctions.viewer, {});
 });
 
 export const ensureViewer = createServerFn({ method: "GET" }).handler(
   async () => {
-    const user = await fetchAuthQuery(api.auth.viewer, {});
+    const user = await fetchAuthQuery(api.authFunctions.viewer, {});
     if (user) {
       return user;
     }
 
     try {
-      await fetchAuthMutation(api.auth.syncUser, {});
+      await fetchAuthMutation(api.authFunctions.syncUser, {});
     } catch (error) {
       console.error("[ensureViewer] syncUser failed:", error);
       return null;
     }
 
-    return await fetchAuthQuery(api.auth.viewer, {});
+    return await fetchAuthQuery(api.authFunctions.viewer, {});
   }
 );
 

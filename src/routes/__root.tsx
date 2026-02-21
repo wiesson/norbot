@@ -8,6 +8,7 @@ import {
 } from "@tanstack/react-router";
 import { createServerFn } from "@tanstack/react-start";
 import { ConvexBetterAuthProvider } from "@convex-dev/better-auth/react";
+import { useConvexAuth } from "convex/react";
 import type { ConvexQueryClient } from "@convex-dev/react-query";
 import type { QueryClient } from "@tanstack/react-query";
 import { authClient } from "@/lib/auth-client";
@@ -38,6 +39,7 @@ export const Route = createRootRouteWithContext<{
   }),
   beforeLoad: async (ctx) => {
     const token = await getAuth();
+    console.log('[auth] beforeLoad token:', !!token, token ? `${token.slice(0, 20)}...` : 'null');
     if (token) {
       ctx.context.convexQueryClient.serverHttpClient?.setAuth(token);
     }
@@ -49,16 +51,24 @@ export const Route = createRootRouteWithContext<{
 
 function RootComponent() {
   const context = useRouteContext({ from: Route.id });
+  console.log('[auth] RootComponent initialToken:', !!context.token);
   return (
     <ConvexBetterAuthProvider
       client={context.convexQueryClient.convexClient}
       authClient={authClient}
       initialToken={context.token}
     >
+      <AuthDebug />
       <Outlet />
       <Toaster />
     </ConvexBetterAuthProvider>
   );
+}
+
+function AuthDebug() {
+  const { isLoading, isAuthenticated } = useConvexAuth();
+  console.log('[auth] useConvexAuth:', { isLoading, isAuthenticated });
+  return null;
 }
 
 function RootDocument({ children }: { children: React.ReactNode }) {
