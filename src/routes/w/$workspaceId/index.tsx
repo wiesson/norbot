@@ -1,6 +1,7 @@
 import { Link, createFileRoute } from "@tanstack/react-router";
-import { useQuery } from "convex/react";
+import { useConvexQuery } from "@/hooks/use-convex-query";
 import { api } from "@convex/_generated/api";
+import { useWorkspace } from "@/hooks/use-workspace";
 import { Badge } from "@/components/ui/badge";
 import {
   Card,
@@ -10,28 +11,17 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { ArrowRight, FolderKanban } from "lucide-react";
-import { useWorkspace } from "./route";
 
-export const Route = createFileRoute("/w/$slug/")({
-  component: WorkspacePage,
+export const Route = createFileRoute("/w/$workspaceId/")({
+  component: WorkspaceDashboard,
 });
 
-function WorkspacePage() {
-  const { slug } = Route.useParams();
-  const workspace = useWorkspace();
-
-  const projects = useQuery(
-    api.projects.list,
-    workspace ? { workspaceId: workspace._id } : "skip"
-  );
-
-  if (!workspace) {
-    return (
-      <div className="py-12 flex items-center justify-center">
-        <div className="animate-pulse text-muted-foreground">Loading...</div>
-      </div>
-    );
-  }
+function WorkspaceDashboard() {
+  const { workspaceId } = Route.useParams();
+  const { workspace } = useWorkspace();
+  const { data: projects } = useConvexQuery(api.projects.list, {
+    workspaceId: workspace._id,
+  });
 
   return (
     <main className="py-6">
@@ -44,26 +34,11 @@ function WorkspacePage() {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-          <Link to="/w/$slug/p/$projectShortCode" params={{ slug, projectShortCode: "all" }}>
-            <Card className="hover:border-primary transition-colors h-full">
-              <CardHeader>
-                <CardTitle className="flex items-center justify-between">
-                  <span>All Tasks</span>
-                  <ArrowRight className="h-4 w-4 text-muted-foreground" />
-                </CardTitle>
-                <CardDescription>Workspace-wide board</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <Badge variant="secondary">ALL</Badge>
-              </CardContent>
-            </Card>
-          </Link>
-
           {projects?.map((project) => (
             <Link
               key={project._id}
-              to="/w/$slug/p/$projectShortCode"
-              params={{ slug, projectShortCode: project.shortCode }}
+              to="/w/$workspaceId/p/$projectId"
+              params={{ workspaceId, projectId: project._id }}
             >
               <Card className="hover:border-primary transition-colors h-full">
                 <CardHeader>

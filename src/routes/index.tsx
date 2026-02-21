@@ -1,6 +1,5 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, redirect } from "@tanstack/react-router";
 import { Button } from "@/components/ui/button";
-import { redirectAuthenticatedToHome } from "@/lib/route-auth";
 import {
   Github,
   MessageCircle,
@@ -16,7 +15,9 @@ import {
 
 export const Route = createFileRoute("/")({
   beforeLoad: async ({ context }) => {
-    await redirectAuthenticatedToHome(context);
+    if (context.isAuthenticated) {
+      throw redirect({ to: "/w" });
+    }
   },
   component: LandingPage,
 });

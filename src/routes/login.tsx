@@ -1,5 +1,5 @@
 import { FormEvent, useState } from "react";
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, redirect } from "@tanstack/react-router";
 import { createServerFn } from "@tanstack/react-start";
 import { Button } from "@/components/ui/button";
 import {
@@ -14,7 +14,6 @@ import { Label } from "@/components/ui/label";
 import { fetchAuthQuery } from "@/lib/auth-server";
 import { api } from "@convex/_generated/api";
 import { authClient } from "@/lib/auth-client";
-import { redirectAuthenticatedToHome } from "@/lib/route-auth";
 
 const getProviders = createServerFn({ method: "GET" }).handler(async () => {
   return await fetchAuthQuery(api.authFunctions.providersStatus, {});
@@ -30,7 +29,9 @@ export const Route = createFileRoute("/login")({
     return { redirect: isSafeRedirect };
   },
   beforeLoad: async ({ context, search }) => {
-    await redirectAuthenticatedToHome(context, search.redirect);
+    if (context.isAuthenticated) {
+      throw redirect({ to: (search.redirect as string) || "/w" });
+    }
   },
   loader: () => getProviders(),
   component: LoginRouteView,
@@ -67,7 +68,7 @@ function LoginRouteView() {
         setIsLoading(false);
         return;
       }
-      window.location.href = redirectTo || "/";
+      window.location.href = redirectTo || "/w";
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to sign in");
       setIsLoading(false);
@@ -82,7 +83,7 @@ function LoginRouteView() {
     try {
       await authClient.signIn.social({
         provider,
-        callbackURL: redirectTo || "/",
+        callbackURL: redirectTo || "/w",
       });
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to start sign-in");
@@ -103,7 +104,7 @@ function LoginRouteView() {
     try {
       await (authClient.signIn as any).magicLink({
         email: email.trim(),
-        callbackURL: redirectTo || "/",
+        callbackURL: redirectTo || "/w",
       });
       setMessage("Magic link sent. Check your inbox.");
     } catch (err) {
@@ -204,13 +205,6 @@ function LoginRouteView() {
               Send Magic Link
             </Button>
           )}
-
-          <div className="text-center text-sm text-muted-foreground">
-            Don&apos;t have an account?{" "}
-            <a href="/signup" className="text-primary hover:underline">
-              Sign up
-            </a>
-          </div>
 
           {message && <p className="text-sm text-emerald-600">{message}</p>}
           {error && <p className="text-sm text-destructive">{error}</p>}

@@ -9,41 +9,21 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as WaitingRouteImport } from './routes/waiting'
-import { Route as SignupRouteImport } from './routes/signup'
-import { Route as SetupRouteImport } from './routes/setup'
-import { Route as SettingsRouteImport } from './routes/settings'
+import { Route as WRouteImport } from './routes/w'
 import { Route as OnboardingRouteImport } from './routes/onboarding'
 import { Route as LogoutRouteImport } from './routes/logout'
 import { Route as LoginRouteImport } from './routes/login'
-import { Route as BotRouteImport } from './routes/bot'
 import { Route as IndexRouteImport } from './routes/index'
-import { Route as InviteTokenRouteImport } from './routes/invite/$token'
-import { Route as WSlugRouteRouteImport } from './routes/w/$slug/route'
-import { Route as WSlugIndexRouteImport } from './routes/w/$slug/index'
-import { Route as WSlugSettingsRouteImport } from './routes/w/$slug/settings'
-import { Route as WSlugInviteRouteImport } from './routes/w/$slug/invite'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
-import { Route as WSlugPProjectShortCodeRouteImport } from './routes/w/$slug/p/$projectShortCode'
+import { Route as WIndexRouteImport } from './routes/w/index'
+import { Route as WWorkspaceIdRouteImport } from './routes/w/$workspaceId'
+import { Route as WWorkspaceIdIndexRouteImport } from './routes/w/$workspaceId/index'
+import { Route as WWorkspaceIdPProjectIdRouteImport } from './routes/w/$workspaceId/p/$projectId'
+import { Route as WWorkspaceIdPProjectIdSetupRouteImport } from './routes/w/$workspaceId/p/$projectId/setup'
 
-const WaitingRoute = WaitingRouteImport.update({
-  id: '/waiting',
-  path: '/waiting',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const SignupRoute = SignupRouteImport.update({
-  id: '/signup',
-  path: '/signup',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const SetupRoute = SetupRouteImport.update({
-  id: '/setup',
-  path: '/setup',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const SettingsRoute = SettingsRouteImport.update({
-  id: '/settings',
-  path: '/settings',
+const WRoute = WRouteImport.update({
+  id: '/w',
+  path: '/w',
   getParentRoute: () => rootRouteImport,
 } as any)
 const OnboardingRoute = OnboardingRouteImport.update({
@@ -61,219 +41,136 @@ const LoginRoute = LoginRouteImport.update({
   path: '/login',
   getParentRoute: () => rootRouteImport,
 } as any)
-const BotRoute = BotRouteImport.update({
-  id: '/bot',
-  path: '/bot',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
-} as any)
-const InviteTokenRoute = InviteTokenRouteImport.update({
-  id: '/invite/$token',
-  path: '/invite/$token',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const WSlugRouteRoute = WSlugRouteRouteImport.update({
-  id: '/w/$slug',
-  path: '/w/$slug',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const WSlugIndexRoute = WSlugIndexRouteImport.update({
-  id: '/',
-  path: '/',
-  getParentRoute: () => WSlugRouteRoute,
-} as any)
-const WSlugSettingsRoute = WSlugSettingsRouteImport.update({
-  id: '/settings',
-  path: '/settings',
-  getParentRoute: () => WSlugRouteRoute,
-} as any)
-const WSlugInviteRoute = WSlugInviteRouteImport.update({
-  id: '/invite',
-  path: '/invite',
-  getParentRoute: () => WSlugRouteRoute,
 } as any)
 const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
   id: '/api/auth/$',
   path: '/api/auth/$',
   getParentRoute: () => rootRouteImport,
 } as any)
-const WSlugPProjectShortCodeRoute = WSlugPProjectShortCodeRouteImport.update({
-  id: '/p/$projectShortCode',
-  path: '/p/$projectShortCode',
-  getParentRoute: () => WSlugRouteRoute,
+const WIndexRoute = WIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => WRoute,
+} as any)
+const WWorkspaceIdRoute = WWorkspaceIdRouteImport.update({
+  id: '/$workspaceId',
+  path: '/$workspaceId',
+  getParentRoute: () => WRoute,
+} as any)
+const WWorkspaceIdIndexRoute = WWorkspaceIdIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => WWorkspaceIdRoute,
+} as any)
+const WWorkspaceIdPProjectIdRoute = WWorkspaceIdPProjectIdRouteImport.update({
+  id: '/p/$projectId',
+  path: '/p/$projectId',
+  getParentRoute: () => WWorkspaceIdRoute,
+} as any)
+const WWorkspaceIdPProjectIdSetupRoute = WWorkspaceIdPProjectIdSetupRouteImport.update({
+  id: '/setup',
+  path: '/setup',
+  getParentRoute: () => WWorkspaceIdPProjectIdRoute,
 } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
-  '/bot': typeof BotRoute
   '/login': typeof LoginRoute
   '/logout': typeof LogoutRoute
   '/onboarding': typeof OnboardingRoute
-  '/settings': typeof SettingsRoute
-  '/setup': typeof SetupRoute
-  '/signup': typeof SignupRoute
-  '/waiting': typeof WaitingRoute
-  '/w/$slug': typeof WSlugRouteRouteWithChildren
-  '/invite/$token': typeof InviteTokenRoute
+  '/w': typeof WRouteWithChildren
   '/api/auth/$': typeof ApiAuthSplatRoute
-  '/w/$slug/invite': typeof WSlugInviteRoute
-  '/w/$slug/settings': typeof WSlugSettingsRoute
-  '/w/$slug/': typeof WSlugIndexRoute
-  '/w/$slug/p/$projectShortCode': typeof WSlugPProjectShortCodeRoute
+  '/w/': typeof WIndexRoute
+  '/w/$workspaceId': typeof WWorkspaceIdRouteWithChildren
+  '/w/$workspaceId/': typeof WWorkspaceIdIndexRoute
+  '/w/$workspaceId/p/$projectId': typeof WWorkspaceIdPProjectIdRouteWithChildren
+  '/w/$workspaceId/p/$projectId/setup': typeof WWorkspaceIdPProjectIdSetupRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
-  '/bot': typeof BotRoute
   '/login': typeof LoginRoute
   '/logout': typeof LogoutRoute
   '/onboarding': typeof OnboardingRoute
-  '/settings': typeof SettingsRoute
-  '/setup': typeof SetupRoute
-  '/signup': typeof SignupRoute
-  '/waiting': typeof WaitingRoute
-  '/invite/$token': typeof InviteTokenRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
-  '/w/$slug/invite': typeof WSlugInviteRoute
-  '/w/$slug/settings': typeof WSlugSettingsRoute
-  '/w/$slug': typeof WSlugIndexRoute
-  '/w/$slug/p/$projectShortCode': typeof WSlugPProjectShortCodeRoute
+  '/w': typeof WIndexRoute
+  '/w/$workspaceId': typeof WWorkspaceIdIndexRoute
+  '/w/$workspaceId/p/$projectId': typeof WWorkspaceIdPProjectIdRouteWithChildren
+  '/w/$workspaceId/p/$projectId/setup': typeof WWorkspaceIdPProjectIdSetupRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
-  '/bot': typeof BotRoute
   '/login': typeof LoginRoute
   '/logout': typeof LogoutRoute
   '/onboarding': typeof OnboardingRoute
-  '/settings': typeof SettingsRoute
-  '/setup': typeof SetupRoute
-  '/signup': typeof SignupRoute
-  '/waiting': typeof WaitingRoute
-  '/w/$slug': typeof WSlugRouteRouteWithChildren
-  '/invite/$token': typeof InviteTokenRoute
+  '/w': typeof WRouteWithChildren
   '/api/auth/$': typeof ApiAuthSplatRoute
-  '/w/$slug/invite': typeof WSlugInviteRoute
-  '/w/$slug/settings': typeof WSlugSettingsRoute
-  '/w/$slug/': typeof WSlugIndexRoute
-  '/w/$slug/p/$projectShortCode': typeof WSlugPProjectShortCodeRoute
+  '/w/': typeof WIndexRoute
+  '/w/$workspaceId': typeof WWorkspaceIdRouteWithChildren
+  '/w/$workspaceId/': typeof WWorkspaceIdIndexRoute
+  '/w/$workspaceId/p/$projectId': typeof WWorkspaceIdPProjectIdRouteWithChildren
+  '/w/$workspaceId/p/$projectId/setup': typeof WWorkspaceIdPProjectIdSetupRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
-    | '/bot'
     | '/login'
     | '/logout'
     | '/onboarding'
-    | '/settings'
-    | '/setup'
-    | '/signup'
-    | '/waiting'
-    | '/w/$slug'
-    | '/invite/$token'
+    | '/w'
     | '/api/auth/$'
-    | '/w/$slug/invite'
-    | '/w/$slug/settings'
-    | '/w/$slug/'
-    | '/w/$slug/p/$projectShortCode'
+    | '/w/'
+    | '/w/$workspaceId'
+    | '/w/$workspaceId/'
+    | '/w/$workspaceId/p/$projectId'
+    | '/w/$workspaceId/p/$projectId/setup'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
-    | '/bot'
     | '/login'
     | '/logout'
     | '/onboarding'
-    | '/settings'
-    | '/setup'
-    | '/signup'
-    | '/waiting'
-    | '/invite/$token'
     | '/api/auth/$'
-    | '/w/$slug/invite'
-    | '/w/$slug/settings'
-    | '/w/$slug'
-    | '/w/$slug/p/$projectShortCode'
+    | '/w'
+    | '/w/$workspaceId'
+    | '/w/$workspaceId/p/$projectId'
+    | '/w/$workspaceId/p/$projectId/setup'
   id:
     | '__root__'
     | '/'
-    | '/bot'
     | '/login'
     | '/logout'
     | '/onboarding'
-    | '/settings'
-    | '/setup'
-    | '/signup'
-    | '/waiting'
-    | '/w/$slug'
-    | '/invite/$token'
+    | '/w'
     | '/api/auth/$'
-    | '/w/$slug/invite'
-    | '/w/$slug/settings'
-    | '/w/$slug/'
-    | '/w/$slug/p/$projectShortCode'
+    | '/w/'
+    | '/w/$workspaceId'
+    | '/w/$workspaceId/'
+    | '/w/$workspaceId/p/$projectId'
+    | '/w/$workspaceId/p/$projectId/setup'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
-  BotRoute: typeof BotRoute
   LoginRoute: typeof LoginRoute
   LogoutRoute: typeof LogoutRoute
   OnboardingRoute: typeof OnboardingRoute
-  SettingsRoute: typeof SettingsRoute
-  SetupRoute: typeof SetupRoute
-  SignupRoute: typeof SignupRoute
-  WaitingRoute: typeof WaitingRoute
-  WSlugRouteRoute: typeof WSlugRouteRouteWithChildren
-  InviteTokenRoute: typeof InviteTokenRoute
+  WRoute: typeof WRouteWithChildren
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/waiting': {
-      id: '/waiting'
-      path: '/waiting'
-      fullPath: '/waiting'
-      preLoaderRoute: typeof WaitingRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/signup': {
-      id: '/signup'
-      path: '/signup'
-      fullPath: '/signup'
-      preLoaderRoute: typeof SignupRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/setup': {
-      id: '/setup'
-      path: '/setup'
-      fullPath: '/setup'
-      preLoaderRoute: typeof SetupRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/settings': {
-      id: '/settings'
-      path: '/settings'
-      fullPath: '/settings'
-      preLoaderRoute: typeof SettingsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/onboarding': {
-      id: '/onboarding'
-      path: '/onboarding'
-      fullPath: '/onboarding'
-      preLoaderRoute: typeof OnboardingRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/logout': {
-      id: '/logout'
-      path: '/logout'
-      fullPath: '/logout'
-      preLoaderRoute: typeof LogoutRouteImport
+    '/': {
+      id: '/'
+      path: '/'
+      fullPath: '/'
+      preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/login': {
@@ -283,54 +180,26 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LoginRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/bot': {
-      id: '/bot'
-      path: '/bot'
-      fullPath: '/bot'
-      preLoaderRoute: typeof BotRouteImport
+    '/logout': {
+      id: '/logout'
+      path: '/logout'
+      fullPath: '/logout'
+      preLoaderRoute: typeof LogoutRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/': {
-      id: '/'
-      path: '/'
-      fullPath: '/'
-      preLoaderRoute: typeof IndexRouteImport
+    '/onboarding': {
+      id: '/onboarding'
+      path: '/onboarding'
+      fullPath: '/onboarding'
+      preLoaderRoute: typeof OnboardingRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/invite/$token': {
-      id: '/invite/$token'
-      path: '/invite/$token'
-      fullPath: '/invite/$token'
-      preLoaderRoute: typeof InviteTokenRouteImport
+    '/w': {
+      id: '/w'
+      path: '/w'
+      fullPath: '/w'
+      preLoaderRoute: typeof WRouteImport
       parentRoute: typeof rootRouteImport
-    }
-    '/w/$slug': {
-      id: '/w/$slug'
-      path: '/w/$slug'
-      fullPath: '/w/$slug'
-      preLoaderRoute: typeof WSlugRouteRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/w/$slug/': {
-      id: '/w/$slug/'
-      path: '/'
-      fullPath: '/w/$slug/'
-      preLoaderRoute: typeof WSlugIndexRouteImport
-      parentRoute: typeof WSlugRouteRoute
-    }
-    '/w/$slug/settings': {
-      id: '/w/$slug/settings'
-      path: '/settings'
-      fullPath: '/w/$slug/settings'
-      preLoaderRoute: typeof WSlugSettingsRouteImport
-      parentRoute: typeof WSlugRouteRoute
-    }
-    '/w/$slug/invite': {
-      id: '/w/$slug/invite'
-      path: '/invite'
-      fullPath: '/w/$slug/invite'
-      preLoaderRoute: typeof WSlugInviteRouteImport
-      parentRoute: typeof WSlugRouteRoute
     }
     '/api/auth/$': {
       id: '/api/auth/$'
@@ -339,46 +208,90 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiAuthSplatRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/w/$slug/p/$projectShortCode': {
-      id: '/w/$slug/p/$projectShortCode'
-      path: '/p/$projectShortCode'
-      fullPath: '/w/$slug/p/$projectShortCode'
-      preLoaderRoute: typeof WSlugPProjectShortCodeRouteImport
-      parentRoute: typeof WSlugRouteRoute
+    '/w/': {
+      id: '/w/'
+      path: '/'
+      fullPath: '/w/'
+      preLoaderRoute: typeof WIndexRouteImport
+      parentRoute: typeof WRoute
+    }
+    '/w/$workspaceId': {
+      id: '/w/$workspaceId'
+      path: '/$workspaceId'
+      fullPath: '/w/$workspaceId'
+      preLoaderRoute: typeof WWorkspaceIdRouteImport
+      parentRoute: typeof WRoute
+    }
+    '/w/$workspaceId/': {
+      id: '/w/$workspaceId/'
+      path: '/'
+      fullPath: '/w/$workspaceId/'
+      preLoaderRoute: typeof WWorkspaceIdIndexRouteImport
+      parentRoute: typeof WWorkspaceIdRoute
+    }
+    '/w/$workspaceId/p/$projectId': {
+      id: '/w/$workspaceId/p/$projectId'
+      path: '/p/$projectId'
+      fullPath: '/w/$workspaceId/p/$projectId'
+      preLoaderRoute: typeof WWorkspaceIdPProjectIdRouteImport
+      parentRoute: typeof WWorkspaceIdRoute
+    }
+    '/w/$workspaceId/p/$projectId/setup': {
+      id: '/w/$workspaceId/p/$projectId/setup'
+      path: '/setup'
+      fullPath: '/w/$workspaceId/p/$projectId/setup'
+      preLoaderRoute: typeof WWorkspaceIdPProjectIdSetupRouteImport
+      parentRoute: typeof WWorkspaceIdPProjectIdRoute
     }
   }
 }
 
-interface WSlugRouteRouteChildren {
-  WSlugInviteRoute: typeof WSlugInviteRoute
-  WSlugSettingsRoute: typeof WSlugSettingsRoute
-  WSlugIndexRoute: typeof WSlugIndexRoute
-  WSlugPProjectShortCodeRoute: typeof WSlugPProjectShortCodeRoute
+interface WWorkspaceIdPProjectIdRouteChildren {
+  WWorkspaceIdPProjectIdSetupRoute: typeof WWorkspaceIdPProjectIdSetupRoute
 }
 
-const WSlugRouteRouteChildren: WSlugRouteRouteChildren = {
-  WSlugInviteRoute: WSlugInviteRoute,
-  WSlugSettingsRoute: WSlugSettingsRoute,
-  WSlugIndexRoute: WSlugIndexRoute,
-  WSlugPProjectShortCodeRoute: WSlugPProjectShortCodeRoute,
+const WWorkspaceIdPProjectIdRouteChildren: WWorkspaceIdPProjectIdRouteChildren = {
+  WWorkspaceIdPProjectIdSetupRoute: WWorkspaceIdPProjectIdSetupRoute,
 }
 
-const WSlugRouteRouteWithChildren = WSlugRouteRoute._addFileChildren(
-  WSlugRouteRouteChildren,
+const WWorkspaceIdPProjectIdRouteWithChildren = WWorkspaceIdPProjectIdRoute._addFileChildren(
+  WWorkspaceIdPProjectIdRouteChildren,
+)
+
+interface WWorkspaceIdRouteChildren {
+  WWorkspaceIdIndexRoute: typeof WWorkspaceIdIndexRoute
+  WWorkspaceIdPProjectIdRoute: typeof WWorkspaceIdPProjectIdRouteWithChildren
+}
+
+const WWorkspaceIdRouteChildren: WWorkspaceIdRouteChildren = {
+  WWorkspaceIdIndexRoute: WWorkspaceIdIndexRoute,
+  WWorkspaceIdPProjectIdRoute: WWorkspaceIdPProjectIdRouteWithChildren,
+}
+
+const WWorkspaceIdRouteWithChildren = WWorkspaceIdRoute._addFileChildren(
+  WWorkspaceIdRouteChildren,
+)
+
+interface WRouteChildren {
+  WIndexRoute: typeof WIndexRoute
+  WWorkspaceIdRoute: typeof WWorkspaceIdRouteWithChildren
+}
+
+const WRouteChildren: WRouteChildren = {
+  WIndexRoute: WIndexRoute,
+  WWorkspaceIdRoute: WWorkspaceIdRouteWithChildren,
+}
+
+const WRouteWithChildren = WRoute._addFileChildren(
+  WRouteChildren,
 )
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
-  BotRoute: BotRoute,
   LoginRoute: LoginRoute,
   LogoutRoute: LogoutRoute,
   OnboardingRoute: OnboardingRoute,
-  SettingsRoute: SettingsRoute,
-  SetupRoute: SetupRoute,
-  SignupRoute: SignupRoute,
-  WaitingRoute: WaitingRoute,
-  WSlugRouteRoute: WSlugRouteRouteWithChildren,
-  InviteTokenRoute: InviteTokenRoute,
+  WRoute: WRouteWithChildren,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
 }
 export const routeTree = rootRouteImport

@@ -78,7 +78,7 @@ export const syncUser = mutation({
   },
 });
 
-export const viewer = query({
+export const currentUser = query({
   args: {},
   handler: async (ctx) => {
     const authUser = await authComponent.getAuthUser(ctx);
