@@ -109,8 +109,8 @@ export const create = mutation({
   args: {
     name: v.string(),
     slug: v.string(),
-    slackTeamId: v.string(),
-    slackTeamName: v.string(),
+    slackTeamId: v.optional(v.string()),
+    slackTeamName: v.optional(v.string()),
     slackBotUserId: v.optional(v.string()),
     createdByUserId: v.optional(v.id("users")),
   },

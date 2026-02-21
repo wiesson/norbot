@@ -14,6 +14,7 @@ import type * as ai from "../ai.js";
 import type * as apiKeys from "../apiKeys.js";
 import type * as auth from "../auth.js";
 import type * as authFunctions from "../authFunctions.js";
+import type * as authTriggers from "../authTriggers.js";
 import type * as channelMappings from "../channelMappings.js";
 import type * as github from "../github.js";
 import type * as http from "../http.js";
@@ -41,6 +42,7 @@ declare const fullApi: ApiFromModules<{
   apiKeys: typeof apiKeys;
   auth: typeof auth;
   authFunctions: typeof authFunctions;
+  authTriggers: typeof authTriggers;
   channelMappings: typeof channelMappings;
   github: typeof github;
   http: typeof http;

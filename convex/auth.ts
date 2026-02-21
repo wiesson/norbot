@@ -2,14 +2,71 @@
 
 import { betterAuth } from "better-auth";
 import { magicLink } from "better-auth/plugins";
-import { createClient, type GenericCtx } from "@convex-dev/better-auth";
+import {
+  createClient,
+  type GenericCtx,
+  type AuthFunctions,
+} from "@convex-dev/better-auth";
 import { convex } from "@convex-dev/better-auth/plugins";
-import { components } from "./_generated/api";
+import { components, internal } from "./_generated/api";
 import type { DataModel } from "./_generated/dataModel";
 import authConfig from "./auth.config";
 
+const triggerFunctions: AuthFunctions = {
+  onCreate: internal.authTriggers.onCreate,
+  onUpdate: internal.authTriggers.onUpdate,
+  onDelete: internal.authTriggers.onDelete,
+};
+
 export const authComponent = createClient<DataModel>(
   components.betterAuth as any,
+  {
+    triggers: {
+      user: {
+        onCreate: async (ctx, doc) => {
+          const email = (doc.email as string)?.toLowerCase();
+          if (!email) return;
+
+          const existing = await ctx.db
+            .query("users")
+            .withIndex("by_email", (q: any) => q.eq("email", email))
+            .first();
+          if (existing) return;
+
+          const now = Date.now();
+          await ctx.db.insert("users", {
+            email,
+            name: (doc.name as string) || email.split("@")[0] || "User",
+            avatarUrl: (doc.image as string) ?? undefined,
+            preferences: {
+              notifications: { slackDM: true, email: false },
+            },
+            isActive: true,
+            lastSeenAt: now,
+            createdAt: now,
+            updatedAt: now,
+          });
+        },
+        onUpdate: async (ctx, newDoc) => {
+          const email = (newDoc.email as string)?.toLowerCase();
+          if (!email) return;
+
+          const existing = await ctx.db
+            .query("users")
+            .withIndex("by_email", (q: any) => q.eq("email", email))
+            .first();
+          if (!existing) return;
+
+          await ctx.db.patch(existing._id, {
+            name: (newDoc.name as string) || existing.name,
+            avatarUrl: (newDoc.image as string) ?? existing.avatarUrl,
+            updatedAt: Date.now(),
+          });
+        },
+      },
+    },
+    authFunctions: triggerFunctions,
+  },
 );
 
 const appOrigin = process.env.APP_URL;

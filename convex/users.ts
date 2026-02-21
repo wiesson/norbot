@@ -32,60 +32,6 @@ export const getByEmail = query({
   },
 });
 
-export const getBySessionToken = query({
-  args: { token: v.string() },
-  handler: async (ctx, args) => {
-    const session = await ctx.db
-      .query("sessions")
-      .withIndex("by_token", (q) => q.eq("token", args.token))
-      .first();
-
-    if (!session || session.expiresAt < Date.now()) {
-      return null;
-    }
-
-    return await ctx.db.get(session.userId);
-  },
-});
-
-export const me = query({
-  args: { sessionToken: v.optional(v.string()) },
-  handler: async (ctx, args) => {
-    if (!args.sessionToken) return null;
-
-    const token = args.sessionToken;
-    const session = await ctx.db
-      .query("sessions")
-      .withIndex("by_token", (q) => q.eq("token", token))
-      .first();
-
-    if (!session || session.expiresAt < Date.now()) {
-      return null;
-    }
-
-    const user = await ctx.db.get(session.userId);
-    if (!user) return null;
-
-    // Get user's workspaces
-    const memberships = await ctx.db
-      .query("workspaceMembers")
-      .withIndex("by_user", (q) => q.eq("userId", user._id))
-      .collect();
-
-    const workspaces = await Promise.all(
-      memberships.map(async (m) => {
-        const ws = await ctx.db.get(m.workspaceId);
-        return ws ? { ...ws, role: m.role } : null;
-      })
-    );
-
-    return {
-      ...user,
-      workspaces: workspaces.filter(Boolean),
-    };
-  },
-});
-
 export const listUsersWithoutWorkspaces = query({
   args: {},
   handler: async (ctx) => {
@@ -169,50 +115,6 @@ export const upsertFromGithub = mutation({
       createdAt: now,
       updatedAt: now,
     });
-  },
-});
-
-export const createSession = mutation({
-  args: {
-    userId: v.id("users"),
-    token: v.string(),
-    expiresInMs: v.optional(v.number()),
-  },
-  handler: async (ctx, args) => {
-    const now = Date.now();
-    const expiresAt = now + (args.expiresInMs ?? 7 * 24 * 60 * 60 * 1000); // 7 days default
-
-    // Delete existing sessions for this user (single session)
-    const existingSessions = await ctx.db
-      .query("sessions")
-      .withIndex("by_user", (q) => q.eq("userId", args.userId))
-      .collect();
-
-    for (const session of existingSessions) {
-      await ctx.db.delete(session._id);
-    }
-
-    // Create new session
-    return await ctx.db.insert("sessions", {
-      userId: args.userId,
-      token: args.token,
-      expiresAt,
-      createdAt: now,
-    });
-  },
-});
-
-export const deleteSession = mutation({
-  args: { token: v.string() },
-  handler: async (ctx, args) => {
-    const session = await ctx.db
-      .query("sessions")
-      .withIndex("by_token", (q) => q.eq("token", args.token))
-      .first();
-
-    if (session) {
-      await ctx.db.delete(session._id);
-    }
   },
 });
 

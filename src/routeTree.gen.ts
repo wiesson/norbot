@@ -14,10 +14,10 @@ import { Route as OnboardingRouteImport } from './routes/onboarding'
 import { Route as LogoutRouteImport } from './routes/logout'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as IndexRouteImport } from './routes/index'
-import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
 import { Route as WIndexRouteImport } from './routes/w/index'
 import { Route as WWorkspaceIdRouteImport } from './routes/w/$workspaceId'
 import { Route as WWorkspaceIdIndexRouteImport } from './routes/w/$workspaceId/index'
+import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
 import { Route as WWorkspaceIdPProjectIdRouteImport } from './routes/w/$workspaceId/p/$projectId'
 import { Route as WWorkspaceIdPProjectIdSetupRouteImport } from './routes/w/$workspaceId/p/$projectId/setup'
 
@@ -46,11 +46,6 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
-  id: '/api/auth/$',
-  path: '/api/auth/$',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const WIndexRoute = WIndexRouteImport.update({
   id: '/',
   path: '/',
@@ -66,16 +61,22 @@ const WWorkspaceIdIndexRoute = WWorkspaceIdIndexRouteImport.update({
   path: '/',
   getParentRoute: () => WWorkspaceIdRoute,
 } as any)
+const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
+  id: '/api/auth/$',
+  path: '/api/auth/$',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const WWorkspaceIdPProjectIdRoute = WWorkspaceIdPProjectIdRouteImport.update({
   id: '/p/$projectId',
   path: '/p/$projectId',
   getParentRoute: () => WWorkspaceIdRoute,
 } as any)
-const WWorkspaceIdPProjectIdSetupRoute = WWorkspaceIdPProjectIdSetupRouteImport.update({
-  id: '/setup',
-  path: '/setup',
-  getParentRoute: () => WWorkspaceIdPProjectIdRoute,
-} as any)
+const WWorkspaceIdPProjectIdSetupRoute =
+  WWorkspaceIdPProjectIdSetupRouteImport.update({
+    id: '/setup',
+    path: '/setup',
+    getParentRoute: () => WWorkspaceIdPProjectIdRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -83,9 +84,9 @@ export interface FileRoutesByFullPath {
   '/logout': typeof LogoutRoute
   '/onboarding': typeof OnboardingRoute
   '/w': typeof WRouteWithChildren
-  '/api/auth/$': typeof ApiAuthSplatRoute
-  '/w/': typeof WIndexRoute
   '/w/$workspaceId': typeof WWorkspaceIdRouteWithChildren
+  '/w/': typeof WIndexRoute
+  '/api/auth/$': typeof ApiAuthSplatRoute
   '/w/$workspaceId/': typeof WWorkspaceIdIndexRoute
   '/w/$workspaceId/p/$projectId': typeof WWorkspaceIdPProjectIdRouteWithChildren
   '/w/$workspaceId/p/$projectId/setup': typeof WWorkspaceIdPProjectIdSetupRoute
@@ -95,8 +96,8 @@ export interface FileRoutesByTo {
   '/login': typeof LoginRoute
   '/logout': typeof LogoutRoute
   '/onboarding': typeof OnboardingRoute
-  '/api/auth/$': typeof ApiAuthSplatRoute
   '/w': typeof WIndexRoute
+  '/api/auth/$': typeof ApiAuthSplatRoute
   '/w/$workspaceId': typeof WWorkspaceIdIndexRoute
   '/w/$workspaceId/p/$projectId': typeof WWorkspaceIdPProjectIdRouteWithChildren
   '/w/$workspaceId/p/$projectId/setup': typeof WWorkspaceIdPProjectIdSetupRoute
@@ -108,9 +109,9 @@ export interface FileRoutesById {
   '/logout': typeof LogoutRoute
   '/onboarding': typeof OnboardingRoute
   '/w': typeof WRouteWithChildren
-  '/api/auth/$': typeof ApiAuthSplatRoute
-  '/w/': typeof WIndexRoute
   '/w/$workspaceId': typeof WWorkspaceIdRouteWithChildren
+  '/w/': typeof WIndexRoute
+  '/api/auth/$': typeof ApiAuthSplatRoute
   '/w/$workspaceId/': typeof WWorkspaceIdIndexRoute
   '/w/$workspaceId/p/$projectId': typeof WWorkspaceIdPProjectIdRouteWithChildren
   '/w/$workspaceId/p/$projectId/setup': typeof WWorkspaceIdPProjectIdSetupRoute
@@ -123,9 +124,9 @@ export interface FileRouteTypes {
     | '/logout'
     | '/onboarding'
     | '/w'
-    | '/api/auth/$'
-    | '/w/'
     | '/w/$workspaceId'
+    | '/w/'
+    | '/api/auth/$'
     | '/w/$workspaceId/'
     | '/w/$workspaceId/p/$projectId'
     | '/w/$workspaceId/p/$projectId/setup'
@@ -135,8 +136,8 @@ export interface FileRouteTypes {
     | '/login'
     | '/logout'
     | '/onboarding'
-    | '/api/auth/$'
     | '/w'
+    | '/api/auth/$'
     | '/w/$workspaceId'
     | '/w/$workspaceId/p/$projectId'
     | '/w/$workspaceId/p/$projectId/setup'
@@ -147,9 +148,9 @@ export interface FileRouteTypes {
     | '/logout'
     | '/onboarding'
     | '/w'
-    | '/api/auth/$'
-    | '/w/'
     | '/w/$workspaceId'
+    | '/w/'
+    | '/api/auth/$'
     | '/w/$workspaceId/'
     | '/w/$workspaceId/p/$projectId'
     | '/w/$workspaceId/p/$projectId/setup'
@@ -166,25 +167,11 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/': {
-      id: '/'
-      path: '/'
-      fullPath: '/'
-      preLoaderRoute: typeof IndexRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/login': {
-      id: '/login'
-      path: '/login'
-      fullPath: '/login'
-      preLoaderRoute: typeof LoginRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/logout': {
-      id: '/logout'
-      path: '/logout'
-      fullPath: '/logout'
-      preLoaderRoute: typeof LogoutRouteImport
+    '/w': {
+      id: '/w'
+      path: '/w'
+      fullPath: '/w'
+      preLoaderRoute: typeof WRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/onboarding': {
@@ -194,18 +181,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof OnboardingRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/w': {
-      id: '/w'
-      path: '/w'
-      fullPath: '/w'
-      preLoaderRoute: typeof WRouteImport
+    '/logout': {
+      id: '/logout'
+      path: '/logout'
+      fullPath: '/logout'
+      preLoaderRoute: typeof LogoutRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/api/auth/$': {
-      id: '/api/auth/$'
-      path: '/api/auth/$'
-      fullPath: '/api/auth/$'
-      preLoaderRoute: typeof ApiAuthSplatRouteImport
+    '/login': {
+      id: '/login'
+      path: '/login'
+      fullPath: '/login'
+      preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/': {
+      id: '/'
+      path: '/'
+      fullPath: '/'
+      preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/w/': {
@@ -229,6 +223,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof WWorkspaceIdIndexRouteImport
       parentRoute: typeof WWorkspaceIdRoute
     }
+    '/api/auth/$': {
+      id: '/api/auth/$'
+      path: '/api/auth/$'
+      fullPath: '/api/auth/$'
+      preLoaderRoute: typeof ApiAuthSplatRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/w/$workspaceId/p/$projectId': {
       id: '/w/$workspaceId/p/$projectId'
       path: '/p/$projectId'
@@ -250,13 +251,15 @@ interface WWorkspaceIdPProjectIdRouteChildren {
   WWorkspaceIdPProjectIdSetupRoute: typeof WWorkspaceIdPProjectIdSetupRoute
 }
 
-const WWorkspaceIdPProjectIdRouteChildren: WWorkspaceIdPProjectIdRouteChildren = {
-  WWorkspaceIdPProjectIdSetupRoute: WWorkspaceIdPProjectIdSetupRoute,
-}
+const WWorkspaceIdPProjectIdRouteChildren: WWorkspaceIdPProjectIdRouteChildren =
+  {
+    WWorkspaceIdPProjectIdSetupRoute: WWorkspaceIdPProjectIdSetupRoute,
+  }
 
-const WWorkspaceIdPProjectIdRouteWithChildren = WWorkspaceIdPProjectIdRoute._addFileChildren(
-  WWorkspaceIdPProjectIdRouteChildren,
-)
+const WWorkspaceIdPProjectIdRouteWithChildren =
+  WWorkspaceIdPProjectIdRoute._addFileChildren(
+    WWorkspaceIdPProjectIdRouteChildren,
+  )
 
 interface WWorkspaceIdRouteChildren {
   WWorkspaceIdIndexRoute: typeof WWorkspaceIdIndexRoute
@@ -273,18 +276,16 @@ const WWorkspaceIdRouteWithChildren = WWorkspaceIdRoute._addFileChildren(
 )
 
 interface WRouteChildren {
-  WIndexRoute: typeof WIndexRoute
   WWorkspaceIdRoute: typeof WWorkspaceIdRouteWithChildren
+  WIndexRoute: typeof WIndexRoute
 }
 
 const WRouteChildren: WRouteChildren = {
-  WIndexRoute: WIndexRoute,
   WWorkspaceIdRoute: WWorkspaceIdRouteWithChildren,
+  WIndexRoute: WIndexRoute,
 }
 
-const WRouteWithChildren = WRoute._addFileChildren(
-  WRouteChildren,
-)
+const WRouteWithChildren = WRoute._addFileChildren(WRouteChildren)
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,

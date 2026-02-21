@@ -1,8 +1,7 @@
-import type { Id } from "./_generated/dataModel";
-import { mutation, query } from "./_generated/server";
+import { query } from "./_generated/server";
 import { authComponent } from "./auth";
 
-async function getUserWithWorkspaces(ctx: { db: any }, userId: Id<"users">) {
+async function getUserWithWorkspaces(ctx: { db: any }, userId: any) {
   const user = await ctx.db.get(userId);
   if (!user) return null;
 
@@ -23,60 +22,6 @@ async function getUserWithWorkspaces(ctx: { db: any }, userId: Id<"users">) {
     workspaces: workspaces.filter(Boolean),
   };
 }
-
-export const syncUser = mutation({
-  args: {},
-  handler: async (ctx) => {
-    const authUser = await authComponent.getAuthUser(ctx);
-
-    if (!authUser?.email) {
-      throw new Error("Unauthorized");
-    }
-
-    const email = authUser.email.toLowerCase();
-    const now = Date.now();
-    const name = authUser.name || email.split("@")[0] || "User";
-    const avatarUrl = authUser.image ?? undefined;
-
-    const existing = await ctx.db
-      .query("users")
-      .withIndex("by_email", (q) => q.eq("email", email))
-      .first();
-
-    if (existing) {
-      await ctx.db.patch(existing._id, {
-        name,
-        avatarUrl,
-        lastSeenAt: now,
-        updatedAt: now,
-      });
-      return existing._id;
-    }
-
-    // For new users, only set githubId/githubUsername if available from GitHub OAuth
-    const githubAccount = (authUser as any).accounts?.find(
-      (a: any) => a.providerId === "github",
-    );
-
-    return await ctx.db.insert("users", {
-      email,
-      name,
-      avatarUrl,
-      githubId: githubAccount ? Number(githubAccount.accountId) : undefined,
-      githubUsername: githubAccount?.username ?? undefined,
-      preferences: {
-        notifications: {
-          slackDM: true,
-          email: false,
-        },
-      },
-      isActive: true,
-      lastSeenAt: now,
-      createdAt: now,
-      updatedAt: now,
-    });
-  },
-});
 
 export const currentUser = query({
   args: {},

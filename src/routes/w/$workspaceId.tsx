@@ -1,4 +1,4 @@
-import { Link, Navigate, createFileRoute, Outlet } from "@tanstack/react-router";
+import { Navigate, createFileRoute, Outlet } from "@tanstack/react-router";
 import { useConvexQuery } from "@/hooks/use-convex-query";
 import { api } from "@convex/_generated/api";
 import type { Id } from "@convex/_generated/dataModel";
@@ -7,6 +7,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { LogOut } from "lucide-react";
+import { WorkspaceSwitcher } from "@/components/workspace-switcher";
 
 export const Route = createFileRoute("/w/$workspaceId")({
   component: WorkspaceLayout,
@@ -33,18 +34,20 @@ function WorkspaceLayout() {
       <div className="min-h-screen bg-neutral-50 dark:bg-neutral-950">
         <header className="border-b bg-white dark:bg-neutral-900 sticky top-0 z-10">
           <div className="container mx-auto px-4 py-3 flex items-center justify-between">
-            <Link to="/w/$workspaceId" params={{ workspaceId }}>
+            {user ? (
+              <WorkspaceSwitcher
+                currentWorkspace={workspace}
+                workspaces={user.workspaces}
+                userId={user._id}
+              />
+            ) : (
               <div>
-                <h1 className="text-lg font-bold">
-                  {workspace.name}
-                </h1>
-                {workspace.slug && (
-                  <p className="text-xs text-muted-foreground">
-                    /{workspace.slug}
-                  </p>
-                )}
+                <p className="text-sm font-semibold">{workspace.name}</p>
+                <p className="text-xs text-muted-foreground">
+                  /{workspace.slug}
+                </p>
               </div>
-            </Link>
+            )}
 
             <div className="flex items-center gap-4">
               {user && (
