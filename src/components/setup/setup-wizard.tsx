@@ -195,7 +195,7 @@ export function SetupWizard({ user }: SetupWizardProps) {
   const handleGoToDashboard = useCallback(() => {
     const ws = user.workspaces?.find((w) => w !== null);
     if (ws) {
-      router.navigate({ to: "/w/$slug", params: { slug: ws.slug } });
+      router.navigate({ to: "/w/$workspaceId", params: { workspaceId: ws._id } });
     } else {
       router.navigate({ to: "/" });
     }

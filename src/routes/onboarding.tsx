@@ -1,46 +1,28 @@
-import { createFileRoute, redirect } from "@tanstack/react-router";
-import { requireAuth, ensureViewer } from "@/lib/route-auth";
+import { createFileRoute, Navigate, redirect } from "@tanstack/react-router";
+import { useConvexQuery } from "@/hooks/use-convex-query";
+import { api } from "@convex/_generated/api";
 import { WaitingRoom } from "@/components/waiting-room";
-import { Button } from "@/components/ui/button";
-import { Loader2 } from "lucide-react";
 
 export const Route = createFileRoute("/onboarding")({
   beforeLoad: async ({ context }) => {
-    requireAuth(context);
-    const user = await ensureViewer();
-
-    if (user?.workspaces?.length) {
-      const slug = user.workspaces[0].slug;
-      throw redirect({ to: "/w/$slug", params: { slug } });
+    if (!context.isAuthenticated) {
+      throw redirect({ to: "/login", search: { redirect: undefined } });
     }
-
-    if (user?.isApproved) {
-      throw redirect({ to: "/setup", search: { step: undefined } });
-    }
-
-    return { user };
   },
   component: OnboardingPage,
 });
 
 function OnboardingPage() {
-  const { user } = Route.useRouteContext();
+  const { data: user } = useConvexQuery(api.authFunctions.currentUser, {});
+
+  if (user === undefined) return null;
+
+  if (user?.workspaces?.length) {
+    return <Navigate to="/w" />;
+  }
 
   if (!user) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-neutral-50 dark:bg-neutral-950">
-        <div className="text-center space-y-4">
-          <Loader2 className="h-8 w-8 animate-spin mx-auto text-muted-foreground" />
-          <p className="text-muted-foreground">Setting up your account...</p>
-          <Button
-            variant="outline"
-            onClick={() => window.location.reload()}
-          >
-            Retry
-          </Button>
-        </div>
-      </div>
-    );
+    return null;
   }
 
   return <WaitingRoom user={user} />;
