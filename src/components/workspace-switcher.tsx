@@ -10,6 +10,7 @@ import {
   DropdownMenuLabel,
   DropdownMenuItem,
   DropdownMenuSeparator,
+  DropdownMenuGroup,
 } from "@/components/ui/dropdown-menu";
 import {
   Dialog,
@@ -106,25 +107,27 @@ export function WorkspaceSwitcher({
           <ChevronsUpDown className="size-4 shrink-0 text-muted-foreground" />
         </DropdownMenuTrigger>
         <DropdownMenuContent align="start" sideOffset={4} className="w-56">
-          <DropdownMenuLabel>Workspaces</DropdownMenuLabel>
-          {workspaces.map((ws) => (
-            <DropdownMenuItem
-              key={ws._id}
-              onSelect={() => {
-                if (ws._id !== currentWorkspace._id) {
-                  navigate({
-                    to: "/w/$workspaceId",
-                    params: { workspaceId: ws._id },
-                  });
-                }
-              }}
-            >
-              <span className="truncate">{ws.name}</span>
-              {ws._id === currentWorkspace._id && (
-                <Check className="ml-auto size-4 shrink-0" />
-              )}
-            </DropdownMenuItem>
-          ))}
+          <DropdownMenuGroup>
+            <DropdownMenuLabel>Workspaces</DropdownMenuLabel>
+            {workspaces.map((ws) => (
+              <DropdownMenuItem
+                key={ws._id}
+                onSelect={() => {
+                  if (ws._id !== currentWorkspace._id) {
+                    navigate({
+                      to: "/w/$workspaceId",
+                      params: { workspaceId: ws._id },
+                    });
+                  }
+                }}
+              >
+                <span className="truncate">{ws.name}</span>
+                {ws._id === currentWorkspace._id && (
+                  <Check className="ml-auto size-4 shrink-0" />
+                )}
+              </DropdownMenuItem>
+            ))}
+          </DropdownMenuGroup>
           <DropdownMenuSeparator />
           <DropdownMenuItem onSelect={() => setDialogOpen(true)}>
             <Plus className="size-4" />
