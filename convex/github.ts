@@ -154,18 +154,6 @@ export const connectRepos = mutation({
 // TYPES
 // ===========================================
 
-interface GitHubApiRepo {
-  id: number;
-  node_id: string;
-  name: string;
-  full_name: string;
-  clone_url: string;
-  default_branch: string;
-  private: boolean;
-  description: string | null;
-  updated_at: string;
-}
-
 export interface GitHubRepo {
   githubId: number;
   githubNodeId: string;
