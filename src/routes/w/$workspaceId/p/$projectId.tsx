@@ -3,7 +3,10 @@ import { useConvexQuery } from "@/hooks/use-convex-query";
 import { api } from "@convex/_generated/api";
 import type { Id } from "@convex/_generated/dataModel";
 import { KanbanBoard } from "@/components/kanban/kanban-board";
-import { ArrowLeft } from "lucide-react";
+import { ProjectSettingsDialog } from "@/components/features/project-settings-dialog";
+import { Button } from "@/components/ui/button";
+import { ArrowLeft, Settings } from "lucide-react";
+import { useState } from "react";
 
 export const Route = createFileRoute("/w/$workspaceId/p/$projectId")({
   component: ProjectPage,
@@ -14,6 +17,7 @@ function ProjectPage() {
   const { data: project, error } = useConvexQuery(api.projects.getById, {
     id: projectId as Id<"projects">,
   });
+  const [settingsOpen, setSettingsOpen] = useState(false);
 
   if (project === undefined && !error) return null;
 
@@ -32,6 +36,19 @@ function ProjectPage() {
           <ArrowLeft className="h-4 w-4" />
         </Link>
         <h2 className="text-lg font-semibold">{project.name}</h2>
+        <Button
+          variant="ghost"
+          size="icon-sm"
+          onClick={() => setSettingsOpen(true)}
+          className="ml-auto text-muted-foreground"
+        >
+          <Settings className="h-4 w-4" />
+        </Button>
+        <ProjectSettingsDialog
+          projectId={project._id}
+          open={settingsOpen}
+          onOpenChange={setSettingsOpen}
+        />
       </div>
       <div className="flex-1 overflow-hidden">
         <KanbanBoard

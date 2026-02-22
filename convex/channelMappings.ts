@@ -33,6 +33,26 @@ export const list = query({
   },
 });
 
+export const listByProject = query({
+  args: {
+    projectId: v.id("projects"),
+  },
+  handler: async (ctx, args) => {
+    const mappings = await ctx.db
+      .query("channelMappings")
+      .withIndex("by_project", (q) => q.eq("projectId", args.projectId))
+      .filter((q) => q.eq(q.field("isActive"), true))
+      .collect();
+
+    return mappings.map((m) => ({
+      _id: m._id,
+      slackChannelId: m.slackChannelId,
+      slackChannelName: m.slackChannelName,
+      settings: m.settings,
+    }));
+  },
+});
+
 export const getByChannel = query({
   args: { slackChannelId: v.string() },
   handler: async (ctx, args) => {

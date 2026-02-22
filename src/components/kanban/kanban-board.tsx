@@ -200,7 +200,7 @@ export function KanbanBoard({ workspaceId, repositoryId, projectId }: KanbanBoar
   }
 
   return (
-    <>
+    <div className="flex flex-col h-full">
       <DndContext
         sensors={sensors}
         onDragStart={handleDragStart}
@@ -208,8 +208,8 @@ export function KanbanBoard({ workspaceId, repositoryId, projectId }: KanbanBoar
         onDragEnd={handleDragEnd}
         onDragCancel={handleDragCancel}
       >
-        <div className="-mx-4 sm:-mx-6 lg:-mx-8">
-          <div className="flex gap-4 overflow-x-auto px-4 pb-4 sm:px-6 lg:px-8 scroll-px-4 sm:scroll-px-6 lg:scroll-px-8">
+        <div className="flex-1 overflow-x-auto py-4 scroll-pl-4 sm:scroll-pl-6 lg:scroll-pl-8">
+          <div className="flex gap-4 w-max mx-auto pl-4 sm:pl-6 lg:pl-8">
             {columns.map((column) => (
               <KanbanColumn
                 key={column.key}
@@ -235,7 +235,7 @@ export function KanbanBoard({ workspaceId, repositoryId, projectId }: KanbanBoar
       </DndContext>
 
       {/* Stats Bar */}
-      <div className="mt-4 flex items-center gap-4 text-sm text-muted-foreground">
+      <div className="pl-4 sm:pl-6 lg:pl-8 py-2 flex items-center gap-4 text-sm text-muted-foreground">
         <span>Total: {kanbanData.stats.total}</span>
         <span className="text-red-500">Critical: {kanbanData.stats.byPriority.critical}</span>
         <span className="text-orange-500">High: {kanbanData.stats.byPriority.high}</span>
@@ -255,6 +255,6 @@ export function KanbanBoard({ workspaceId, repositoryId, projectId }: KanbanBoar
         projectId={projectId}
         initialStatus={createModalStatus}
       />
-    </>
+    </div>
   );
 }

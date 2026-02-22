@@ -14,6 +14,13 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { ArrowRight, FolderKanban, Plus } from "lucide-react";
 import { useState } from "react";
 
@@ -62,17 +69,46 @@ function WorkspaceDashboard() {
               </Card>
             </Link>
           ))}
-        </div>
 
-        {projects && projects.length === 0 && (
-          <CreateProjectCard workspaceId={workspaceId} />
-        )}
+          {projects && <CreateProjectCard workspaceId={workspaceId} />}
+        </div>
       </div>
     </main>
   );
 }
 
 function CreateProjectCard({ workspaceId }: { workspaceId: string }) {
+  const [open, setOpen] = useState(false);
+
+  return (
+    <>
+      <button
+        type="button"
+        onClick={() => setOpen(true)}
+        className="border-2 border-dashed rounded-xl flex flex-col items-center justify-center gap-2 text-muted-foreground hover:text-foreground hover:border-primary transition-colors cursor-pointer min-h-[158px]"
+      >
+        <Plus className="h-6 w-6" />
+        <span className="text-sm font-medium">New project</span>
+      </button>
+
+      <CreateProjectDialog
+        workspaceId={workspaceId}
+        open={open}
+        onOpenChange={setOpen}
+      />
+    </>
+  );
+}
+
+function CreateProjectDialog({
+  workspaceId,
+  open,
+  onOpenChange,
+}: {
+  workspaceId: string;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+}) {
   const { workspace } = useWorkspace();
   const navigate = useNavigate();
   const createProject = useMutation(api.projects.create);
@@ -100,6 +136,13 @@ function CreateProjectCard({ workspaceId }: { workspaceId: string }) {
     }
   }
 
+  function reset() {
+    setName("");
+    setShortCode("");
+    setCodeEdited(false);
+    setError(null);
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!name.trim() || !shortCode.trim()) return;
@@ -112,28 +155,34 @@ function CreateProjectCard({ workspaceId }: { workspaceId: string }) {
         name: name.trim(),
         shortCode: shortCode.trim().toUpperCase(),
       });
+      onOpenChange(false);
+      reset();
       navigate({
         to: "/w/$workspaceId/p/$projectId",
         params: { workspaceId, projectId },
       });
     } catch (err: any) {
       setError(err.message ?? "Failed to create project");
+    } finally {
       setSubmitting(false);
     }
   }
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <Plus className="h-4 w-4" />
-          Create your first project
-        </CardTitle>
-        <CardDescription>
-          Projects group tasks and give them short codes like PROJ-123.
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
+    <Dialog
+      open={open}
+      onOpenChange={(nextOpen) => {
+        onOpenChange(nextOpen);
+        if (!nextOpen) reset();
+      }}
+    >
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>Create project</DialogTitle>
+          <DialogDescription>
+            Projects group tasks and give them short codes like PROJ-123.
+          </DialogDescription>
+        </DialogHeader>
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
           <div className="grid grid-cols-1 sm:grid-cols-[1fr_120px] gap-4">
             <div className="space-y-2">
@@ -171,7 +220,7 @@ function CreateProjectCard({ workspaceId }: { workspaceId: string }) {
             {submitting ? "Creating..." : "Create project"}
           </Button>
         </form>
-      </CardContent>
-    </Card>
+      </DialogContent>
+    </Dialog>
   );
 }
